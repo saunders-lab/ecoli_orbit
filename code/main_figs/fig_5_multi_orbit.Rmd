@@ -1,0 +1,132 @@
+---
+title: "Figure 5: Multi ORBIT"
+subtitle: 'E. coli ORBIT 2023'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+
+# Notes
+
+This figure contains data from different experiments that were used demonstrate the construction of untargeted and orthogonal double mutants with ORBIT. Data figures were made in R notebooks and exported as pdfs. Cosmetic improvements were made in Adobe Illustrator. Note that Fig. 5A, and 5D-E were made in Adobe Illustrator.
+
+----
+
+Setup packages and plotting for the notebook:
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+# Check packages
+source("../tools/package_setup.R")
+# Load packages
+library(tidyverse)
+library(cowplot)
+library(kableExtra)
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+# Load plotting tools
+source("../tools/plotting_tools.R")
+#Modify the plot theme
+theme_set(theme_notebook())
+```
+
+-----
+
+# Fig. 5B - Orthogonal heatmap
+
+Read in the data.
+
+```{r}
+
+df_heatmap <- read_csv("../../data/low_throughput_experiments/2022_10_14_chlor_orth_2_data.csv") %>% mutate(eff = Chlor_count / LB_count)
+
+df_heatmap %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+Now we can plot:
+
+```{r}
+
+#Plot only the att sites that worked well. The full heatmap is shown in supplement.
+plot_heatmap <- ggplot(df_heatmap %>% filter(attP!='P4' & attB != 'B4')%>% filter(attP!='P6' & attB != 'B6'), aes(x = attP, y = attB, fill = eff)) + 
+  geom_tile(color = 'white', size = 0.25) + 
+  geom_tile(data = . %>% filter(match == T), fill = NA, color = 'black', size = 0.5)+
+  geom_text(aes(label = scales::label_percent(accuracy = 0.01)(eff)), size = 2.85)+
+  scale_fill_viridis_c(trans = 'log',label = scales::percent_format(), breaks = c(0.005, 0.0005,0.00005)) + 
+  labs(y = 'attB version\n(∆galK targeting oligo)' , x = 'attP version\n(pInt_chlorR)', fill = 'Efficiency')
+
+plot_heatmap
+```
+
+# Fig. 5C - Double Orbit efficiency
+
+Let's read in the data:
+
+```{r}
+
+df_eff <- read_csv("../../data/low_throughput_experiments/2022_11_04_double_triple_orbit_att4_data.csv") 
+
+df_eff %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+Next we can use the single mutant frequencies to calculate the expected double mutant frequencies. We will also get the averages for plotting:
+
+```{r}
+df_eff_meta <- df_eff %>% 
+  mutate(kan_eff = Kan_count / LB_count,
+         chlor_eff = Chlor_count / LB_count,
+         kan_chlor_eff = Kan_Chlor_count / LB_count) %>% 
+  mutate(expected_freq =  kan_eff * chlor_eff) %>% 
+  group_by(condition) %>% 
+  mutate(avg_kan_chlor_eff = mean(kan_chlor_eff))
+  
+df_eff_meta %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+```
+
+Now we can plot everything:
+
+```{r}
+
+#negative control value
+pInt_only_expected <- (df_eff_meta %>% filter(condition == 'pInt_only_Kan_Chlor'))$expected_freq
+
+#filter data to only plot double mutants (single mutant was done as control, triple mutant was also attempted)
+plot_eff <- ggplot(df_eff_meta %>% filter(condition != 'galK_hisA_metA100_kan_chlor_amp' & condition != 'p265_Kan' & condition != 'pInt_only_Kan_Chlor'),
+       aes(x = condition, y = kan_chlor_eff , group = factor(replicate))) + 
+  geom_hline(yintercept = pInt_only_expected, linetype = 2, color = 'light gray')+
+  geom_linerange(aes(x = condition, ymin = expected_freq, ymax = kan_chlor_eff), position = position_dodge(width = 0.5), color = 'light gray', linetype = 3)+
+   geom_point(aes(y = expected_freq), shape = 4, position = position_dodge(width = 0.5),color = 'light gray')+ #expected frequency as X
+   geom_point(shape = 21, position = position_dodge(width = 0.5), fill = 'white',color = 'light gray') + #observed frequency as open circle
+  geom_point(data = . %>% filter(replicate == 1), aes(y = avg_kan_chlor_eff), size = 2)+
+  scale_y_log10(labels = scales::label_log())+
+  scale_x_discrete(labels = c('B1-P1\nB1-P1','B2-P2\nB1-P1','B3-P3\nB1-P1','B5-P5\nB1-P1'))+
+  labs(x = '∆galK∆hisA att site composition',y = 'kanR / chlorR efficiency')
+
+plot_eff
+```
+
+# Create Fig. 5
+
+```{r}
+theme_set(theme_figure())
+
+
+fig_5_multi <- plot_grid(plot_heatmap + guides(fill = 'none'), plot_eff, ncol = 1,
+                   align = 'hv', axis = 'lr', scale = 1,
+                   labels = c('B','C'))
+
+
+fig_5_multi
+
+save_plot("../../figures/r_pdf_figs/main_figs/fig_5_multi.pdf", fig_5_multi, base_width = 2.5, base_height = 5)
+```
+
+```{r}
+sessionInfo()
+```

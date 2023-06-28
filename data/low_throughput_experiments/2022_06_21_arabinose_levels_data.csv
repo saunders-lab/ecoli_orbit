@@ -1,0 +1,25 @@
+﻿condition,arabinose_per,TO,locus,replicate,LB_count,Kan_count
+0% arabinose,0,p265,galK,1,430000,370
+0% arabinose,0,p265,galK,2,610000,250
+0.01 % arabinose,0.01,p265,galK,1,680000,550
+0.01 % arabinose,0.01,p265,galK,2,550000,470
+0.1 % arabinose,0.1,p265,galK,1,440000,960
+0.1 % arabinose,0.1,p265,galK,2,510000,780
+1 % arabinose,1,p265,galK,1,550000,1490
+1 % arabinose,1,p265,galK,2,620000,1050
+0% arabinose,0,p266,hisA,1,440000,93
+0% arabinose,0,p266,hisA,2,470000,137
+0.01 % arabinose,0.01,p266,hisA,1,560000,390
+0.01 % arabinose,0.01,p266,hisA,2,410000,700
+0.1 % arabinose,0.1,p266,hisA,1,600000,790
+0.1 % arabinose,0.1,p266,hisA,2,520000,1170
+1 % arabinose,1,p266,hisA,1,540000,1260
+1 % arabinose,1,p266,hisA,2,590000,1310
+0% arabinose,0,pInt only,pInt_only,1,500000,6
+0% arabinose,0,pInt only,pInt_only,2,560000,7
+0.01 % arabinose,0.01,pInt only,pInt_only,1,560000,7
+0.01 % arabinose,0.01,pInt only,pInt_only,2,530000,8
+0.1 % arabinose,0.1,pInt only,pInt_only,1,570000,8
+0.1 % arabinose,0.1,pInt only,pInt_only,2,610000,9
+1 % arabinose,1,pInt only,pInt_only,1,470000,20
+1 % arabinose,1,pInt only,pInt_only,2,450000,16

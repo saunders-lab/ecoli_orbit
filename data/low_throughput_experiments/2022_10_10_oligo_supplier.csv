@@ -1,0 +1,25 @@
+﻿condition,supplier,locus,replicates,targeting_oligo,LB_count,Kan_count
+galK - IDT,IDT,galK,1,p177,1070000,910
+galK - IDT,IDT,galK,2,p177,1170000,1380
+hisA - IDT,IDT,hisA,1,p229,1250000,240
+hisA - IDT,IDT,hisA,2,p229,1570000,100
+metA - IDT,IDT,metA,1,p230,1010000,30
+metA - IDT,IDT,metA,2,p230,1000000,87
+leuD - IDT,IDT,leuD,1,p231,1310000,107
+leuD - IDT,IDT,leuD,2,p231,1210000,90
+galK - Sigma,Sigma,galK,1,p264,1250000,260
+galK - Sigma,Sigma,galK,2,p264,1060000,910
+hisA - Sigma,Sigma,hisA,1,p272,1090000,61
+hisA - Sigma,Sigma,hisA,2,p272,980000,96
+metA - Sigma,Sigma,metA,1,p275,1260000,88
+metA - Sigma,Sigma,metA,2,p275,1110000,60
+leuD - Sigma,Sigma,leuD,1,p278,1270000,75
+leuD - Sigma,Sigma,leuD,2,p278,1220000,57
+galK - Synbio tech,SynbioTech,galK,1,p455,1130000,113
+galK - Synbio tech,SynbioTech,galK,2,p455,800000,92
+hisA - Synbio tech,SynbioTech,hisA,1,p456,990000,57
+hisA - Synbio tech,SynbioTech,hisA,2,p456,1200000,50
+metA - Synbio tech,SynbioTech,metA,1,p457,910000,17
+metA - Synbio tech,SynbioTech,metA,2,p457,1140000,13
+leuD - Synbio tech,SynbioTech,leuD,1,p458,1290000,34
+leuD - Synbio tech,SynbioTech,leuD,2,p458,1110000,26

@@ -1,0 +1,242 @@
+---
+title: "Seq data analysis: Right side TO libs"
+subtitle: 'E. coli ORBIT 2022'
+author: 'Scott H. Saunders'
+output: 
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+```{r warning=FALSE, message=FALSE}
+library(tidyverse)
+library(GenomicAlignments)
+library(kableExtra)
+library(ggridges)
+
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+
+source("../tools/plotting_tools.R")
+theme_set(theme_notebook())
+```
+
+This notebook performs the analysis on the mapped reads for the four ORBIT libraries that were constructed. As a reminder, these different deletion libraries were as follows:
+
+-   Library #0: galK, hisA, metA, leuD (gold standards) + 23 TF genes (27 targets total)
+
+-   Library #1: All TF genes \< 575 bp (76 targets total)
+
+-   Library #2: All TF genes \> 575 bp (226 targets total)
+
+-   Library #3: All small RNA genes (90 targets total)
+
+Within each library the targeting oligo deletes a target gene, and pInt_kanR should integrate into the newly formed attB site on the genome. This should leave us with a library with the target genes deleted, replaced by the pInt_kanR backbone flanked by the attR and attL sites. To test the accuracy with which these libraries were constructed sequencing libraries were prepared to amplify these genome-pInt junctions. This was done by shearing genomic DNA, adding C tails to free DNA ends and then amplifying junctions with a polyG and pInt specific primer. This notebook takes the processed (filtered, trimmed, mapped) reads from the processing notebook and uses these mapped sequences to analyze how accurately the designed ORBIT mutants were created.
+
+# Read in data and figure out TO / read orientation
+
+First, we need to read in the mapped reads for each right side library. These are stored as bam files. Here we combine all of the mapped reads into one dataframe that will go through analysis.
+
+```{r }
+bam_path <- "../../data/seq_data/right_side_TO_libs/6_bam_files/"
+
+df_bam_0_1 <- readGAlignments(file = paste0(bam_path,"lib_0_right_mapped.bam")) %>% as_tibble() %>% mutate(lib=0)
+
+df_bam_1_1 <- readGAlignments(file = paste0(bam_path,"lib_1_right_mapped.bam")) %>% as_tibble() %>% mutate(lib=1)
+
+df_bam_2_1 <- readGAlignments(file = paste0(bam_path,"lib_2_right_mapped.bam")) %>% as_tibble() %>% mutate(lib=2)
+
+df_bam_3_1 <- readGAlignments(file = paste0(bam_path,"lib_3_right_mapped.bam")) %>% as_tibble() %>% mutate(lib=3)
+
+#df_bam_0 %>% group_by(start) %>% summarise(n=n()) %>% arrange(desc(n))
+
+
+df_data_all <- bind_rows(df_bam_0_1,df_bam_1_1,df_bam_2_1,df_bam_3_1)
+
+df_data_all %>% head(10) %>% kable() %>% kable_styling()
+```
+
+This full data frame is ~330k lines, meaning that we are working with that many reads total. Next we need to read in the information for the targeting oligos that we designed. Each oligo was ordered to delete a certain region of the genome, as specified by a left and right genomic position, corresponding roughly to the start and end of the target genes. Here we read in the information for the different TO libraries.
+
+
+```{r}
+df_TOs <- read_csv("../../../ecoli_ORBIT_paper_final/data/seq_data/right_side_TO_libs/df_TOs.csv")
+
+df_TOs
+```
+
+Figure out starting position of read for each TO. Remember that only the fwd sequence of attB was used in the actual oligo to prevent PCR issues. Normally the attB sequence would be directed the same way as the gene, but here the only thing that affects the directionality is the replichore. So for replichore 1 (>3.9M & <1.6M), the oligo sequence comes from the reverse strand, meaning that the attB also points "reverse". Therefore when sequencing the "right side library" the read maps to the forward + strand and the "left side library" maps to the reverse - strand. For replichore 2 it is the opposite. The TO sequence comes from the + strand, meaning attB points fwd. Therefore the upstream (aka right) library maps to the - strand and the downstream (aka left) maps to the + strand. 
+
+We can see the evidence that this is actually how the ORBIT library sequences are oriented by looking at which strand the reads map to vs. the genomic position (replichore).
+
+```{r}
+ggplot(df_data_all %>% mutate(strand = factor(strand, levels = c('-','+'))) , 
+       aes(x = start, y = strand)) + 
+  geom_vline(xintercept = c(1590250.5,3923882.5), color = 'red')+
+  geom_jitter(height=0.25, shape =21, alpha = 0.01)+
+  facet_wrap(~lib, ncol = 1, scales = 'free')
+```
+
+It is clear that most reads are coming from the + strand on replichore 1 for all libraries, and the - strand for replichore 2 as expected. Interestingly, the small number of reads that do not conform to this, may indicate an off target integration that wasn't specified in our designed TO library.
+
+This orientation issue is important to understand, because we need to be able to match the mapped reads to where we expect a read to start if the designed TO worked perfectly. Now that we know our orientation intuition seems right, we can look at the list of TOs and assign what should be the theoretical "read_start_position" if the mutant were made perfectly. Remember these oligos were specified by the region between two genomic positions (left_oligo_pos & right_oligo_pos), so the first genomic sequence outside of these insertions should either be the left or right specified position. The upstream junction (aka right) should start at the right_oligo_pos for replichore 1 targets, and the left_oligo_pos for replichore 2 targets based on their orientations.
+
+Therefore, we will just assign the correct oligo pos to the TOs.
+
+```{r}
+
+ori <-  3923882.5
+ter <-  1590250.5
+
+##*** CHANGING FOR RIGHT SIDE
+
+df_TOs <- df_TOs %>% 
+  mutate(gen_rep = ifelse(left_oligo_pos < ori & left_oligo_pos > ter, 2,1)) %>% 
+  mutate(read_start_pos = ifelse(gen_rep==1, right_oligo_pos,left_oligo_pos)) %>% 
+  mutate(read_start_pos = ifelse(gene == 'metA', left_oligo_pos, read_start_pos)) #metA is the only special case, because it uses the - direction attB site in lib 0.
+
+df_TOs 
+```
+
+There is one exception here, which is the *metA* oligo. This is because this oligo was only in the library 0 from IDT, which did not require PCR amplification, so the same oligo sequence was used as from the rest of the paper, which has attB facing the opposite orientation as the scheme described above (attB faces the same way as the gene).
+
+# Match reads to putative TOs
+
+With all that sorted we can now iterate through every read in the dataset and try to find the closest TO match. Then we can evaluate how close the reads are to the expected start sites for their inferred TO.
+
+This for loop achieves this very simply, by iterating through each read, then measuring the distance between the read start position and the start positions of every TO designed for that library. The nearest TO is assigned to the read as a 'gene_id' and that minimum distance is recorded with the read. This loop takes ~30 min to run on a desktop, but the csv output can be read in without running.
+```{r eval = F}
+# Takes ~30 min to run
+
+#Initialize dataframe to store reads
+df_read_nearest <- tibble()
+
+#Based on alignment, if read maps to + strand, then the illumina start of the read is the start of the alignment.
+#if read maps to - strand then illumina read start is actually the end of the mapped read
+df_test <- df_data_all %>% 
+  mutate(read_start_pos = ifelse(strand =='+', start, end))
+
+#Pre split the different TOs into dataframes by library to make loop run faster.
+df_TO_0 <- df_TOs %>% filter(lib==0)
+df_TO_1 <- df_TOs %>% filter(lib==1)
+df_TO_2 <- df_TOs %>% filter(lib==2)
+df_TO_3 <- df_TOs %>% filter(lib==3)
+
+#Iterates through each mapped read
+for( row in 1:nrow(df_test)){
+  
+  #picks the set of TOs that matches the library number
+  if(df_test$lib[row]==0){
+    df_to <- df_TO_0
+    }else if(df_test$lib[row]==1){
+    df_to <- df_TO_1
+    }else if(df_test$lib[row]==2){
+    df_to <- df_TO_2
+    }else if(df_test$lib[row]==3){
+    df_to <- df_TO_3
+    }
+  
+  #Compares the `read start pos` of each designed TO in the library, to the `read start pos` of the read (vector).
+  #Then finds the minimum difference min(abs()) of the distances between this read and all TOs
+  min_val <- min(abs(df_to$read_start_pos - df_test$read_start_pos[row]))
+  
+  #Same as above, but returns the TO index of the min val, 
+  #which is then used to get the actual TO that has the closest start pos to the read. 
+  #The gene this TO deletes is assigned to the read as `gene_id` and the min_val is also stored
+  min_index <- which.min(abs(df_to$read_start_pos - df_test$read_start_pos[row]))
+  gene_id <- df_to$gene[min_index]
+  df_reads <- tibble(df_test[row,],gene_id = gene_id, min_val = min_val) 
+  
+  #add this read to the growing dataframe of processed reads
+  df_read_nearest <- bind_rows(df_read_nearest, df_reads)
+  
+} 
+
+df_read_nearest
+
+write_csv(df_read_nearest, '../../data/seq_data/right_side_TO_libs/df_read_nearest_right.csv')
+```
+
+Now that we have gone through and categorized each read and calculated the minimum distance to a TO target, we can further classify reads as perfect (`min_val=0`) or as off target if it falls beyond 500bp away (`min_val>500`). Then we can get summary statistics. What fraction of reads are off target?
+
+```{r}
+
+df_read_nearest <- read_csv('../../data/seq_data/right_side_TO_libs/df_read_nearest_right.csv')
+
+df_read_nearest <- df_read_nearest %>% 
+  mutate(gene_id = ifelse(min_val >500, 'off_target',gene_id)) %>% 
+  mutate(off_target = ifelse(gene_id=='off_target',T,F)) %>% 
+  mutate(perfect = ifelse(min_val==0, T, F))
+
+df_read_nearest %>% group_by(lib, off_target) %>% summarise(n=n()) %>% 
+  pivot_wider(names_from = off_target, names_prefix = 'off_target_', values_from = n) %>% 
+  mutate(total =off_target_TRUE + off_target_FALSE) %>% 
+  mutate(frac_off_target = off_target_TRUE / (off_target_TRUE + off_target_FALSE))
+```
+Less than 4% of reads are off target across all the libraries! And we can also look at how many reads were perfect:
+
+```{r}
+df_read_nearest %>% group_by(lib, perfect) %>% summarise(n=n()) %>% 
+  pivot_wider(names_from = perfect, names_prefix = 'perfect_', values_from = n) %>% 
+  mutate(total = perfect_TRUE + perfect_FALSE) %>% 
+  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE))
+
+```
+
+More than 95% of reads from all the libraries were perfect! We can visualize the perfect and off target score graphically, which is shown as a summary metric in the main fig:
+
+```{r}
+df_read_nearest %>% 
+  mutate(status = paste0('off_',off_target, '_p_',perfect)) %>% 
+  mutate(status = fct_relevel(status, 'off_TRUE_p_FALSE','off_FALSE_p_FALSE','off_FALSE_p_TRUE')) %>% 
+  ggplot(aes(x = lib, fill = status)) + 
+    geom_bar(color = 'black',position = 'fill') +
+    scale_y_continuous(labels = scales::label_percent())+
+    scale_fill_viridis_d(labels = c('Off target / Not Perfect','On Target / Not Perfect','On Target / Perfect'), option = 'A')  + 
+    labs(y = 'Reads', x = 'Library', fill = 'Category')
+```
+
+
+# How many of the intended TO mutations were recovered?
+
+Instead of taking a "read-centric" view, we can instead take a "target-centric" view and ask how many of the TOs we designed actually yielded mutants in our libraries. First we will count up all the reads for each gene_id - this will also be useful later.
+
+```{r}
+#Group by lib and gene and count up reads assigned to each gene
+df_read_nearest_summary <- df_read_nearest %>% 
+  group_by(lib, gene_id) %>% 
+  summarise( n=n(), min_val = mean(min_val))
+
+df_read_nearest_summary %>% head(10) %>% kable() %>% kable_styling()
+```
+
+And then we will see if there are any TOs that have no reads. From there we can look at the fraction of each TO library for which a mutant was not recovered (within the 500bp threshold).
+
+```{r}
+#Merge the read counts 
+df_TOs_found <- left_join(df_TOs, df_read_nearest_summary, by = c('gene'='gene_id', 'lib')) %>% 
+  mutate(found = ifelse(is.na(n) & is.na(min_val), F, T))
+
+df_TOs_found %>% 
+  group_by(lib, found) %>% 
+  summarise(n=n()) %>% 
+  pivot_wider(names_from = found, names_prefix = 'found_', values_from = n, values_fill = 0) %>% 
+  mutate(frac_found = found_TRUE / (found_TRUE + found_FALSE))
+
+
+```
+So for all 4 libraries, at least 90% of the TOs were found with mutants represented. These are the mutants that were not found:
+
+```{r}
+df_TO_not_found <- df_TOs_found %>% filter(found == F)
+
+df_TO_not_found %>% select(-go_term,-oligo) %>% kable() %>% kable_styling()
+```
+
+There are 32 spread across the 3 twist libraries. We will investigate in further detail in combination with the left side library. 
+
+```{r}
+sessionInfo()
+```
+

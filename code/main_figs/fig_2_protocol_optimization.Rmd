@@ -1,0 +1,317 @@
+---
+title: "Figure 2: Protocol Optimization"
+subtitle: 'E. coli ORBIT 2023'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+--------
+
+# Notes
+
+This figure contains data from many different experiments that were used to optimize the protocol for ORBIT. Data figures were made in R notebooks and exported as pdfs. Cosmetic improvements were made in Adobe Illustrator. Note that Figure 2A is a diagram that was made in Adobe Illustrator.
+
+----
+
+Setup packages and plotting for the notebook:
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+
+# Check packages
+source("../tools/package_setup.R")
+
+# Load packages
+library(tidyverse)
+library(cowplot)
+library(kableExtra)
+
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+
+# Load plotting tools
+source("../tools/plotting_tools.R")
+
+#Modify the plot theme
+theme_set(theme_notebook())
+```
+
+-----
+
+# Fig. 2B - Helper plasmid induction conditions
+
+This experiment used a ∆galK targeting oligo with a pInt_kanR integrating plasmid and tested different helper plasmid induction schemes. Let's first read in the data.
+
+```{r}
+df_cond <- read_csv("../../data/low_throughput_experiments/2021_07_01_tol_ara_params.csv")
+
+df_cond %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+Now let's plot the data. Note that the labeling of each condition gets complicated, so we made a special legend with + / - for each possible induction.
+
+```{r}
+
+#Plot individual replicates, mean points / crossbars, and negative control Xs
+plot_cond <- ggplot(df_cond %>% filter(rep != 'NC'), aes(x = factor(cond_id), y = Kan_LB)) + 
+  geom_point(data = df_cond %>% filter(rep == 'NC') , shape = 4, color = 'light gray') + 
+  geom_jitter(width = 0.1, height = 0, shape =21, alpha = 0.4, color = "#440154FF") + 
+  stat_summary(fun = 'mean', geom = 'crossbar', width = 0.5, size = 0.25, color = "#440154FF")+
+  stat_summary(fun = 'mean', geom = 'point', width = 0.5, color = "#440154FF")+
+  scale_y_log10(labels = scales::label_percent(accuracy = 0.0001), breaks = c(0.000001,0.0001, 0.01))+
+  scale_x_discrete(labels = NULL)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  labs(x = NULL, y = 'Efficiency')
+
+plot_cond_labs <- df_cond %>% filter(rep == 1) %>% select(cond_id, pre_tol, pre_ara, post_tol, post_ara) %>% pivot_longer(cols = c('pre_tol','pre_ara','post_tol','post_ara'), names_to = 'inducer') %>% mutate(value = ifelse(value == T, '+','-')) %>% 
+  ggplot(aes(x = factor(cond_id), y = inducer, label = value)) + geom_text() + 
+  scale_y_discrete(limits = c('post_ara','pre_ara','post_tol','pre_tol'),labels = c('post ara','pre ara','post tol','pre tol')) + 
+  labs(x = NULL, y = NULL) + theme(axis.line = element_blank(), axis.text.x = element_blank(), axis.ticks = element_blank())
+
+plot_cond_legend <- plot_grid(plot_cond, plot_cond_labs, ncol = 1, rel_heights = c(4,1), rel_widths = c(1,1), 
+                   align = 'hv', axis = 'lr', scale = 1.0)
+plot_cond_legend
+```
+
+# Fig. 2C - Targeting oligo length
+
+This experiment tested the effect of targeting oligo length. Identical oligos were used for the four different loci, but their homology arms varied in length. The total length of the oligo is reported here, which includes both homology arms and the 38 bp attB site. Let's read in the data.
+
+```{r}
+df_len <- read_csv("../../data/low_throughput_experiments/2022_02_15_orbit_TO_len_data.csv") %>% 
+  mutate(eff = Kan / LB)
+
+df_len %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+```
+
+Let's plot the data.
+
+```{r}
+
+# Calculate condition means and standard deviations
+df_len_summary <- df_len %>% 
+  filter(targeting_oligo != 'pInt_only') %>% 
+  group_by(gene, TO_len) %>% 
+  summarise(mean = mean(eff), sd = sd(eff)) 
+
+# Get negative control value
+df_len_control <- df_len %>% filter(targeting_oligo == 'pInt_only')
+to_len_pInt <- mean(df_len_control$eff)
+
+# Plot individual replicates, mean points, and connecting lines
+plot_to_len <- ggplot(df_len, aes(x = TO_len, y = eff, color = gene)) + 
+  geom_hline(yintercept = to_len_pInt, color = 'gray', linetype = 'dashed')+
+  geom_jitter(shape = 21, alpha = 0.4, width =1, height =0) +
+ geom_point(data = df_len_summary,
+                 aes(y = mean),
+                 position = position_jitter(height = 0, width = 0.1))+
+ # geom_point(data = df_len_summary %>% filter(!(gene=='metA' & TO_len == 74)), 
+ #                 aes(y = mean),
+ #                 position = position_jitter(height = 0, width = 0.1))+
+ # geom_point(data = df_len_summary %>% filter(gene == 'metA' & TO_len == 74), 
+ #                 aes(y = mean), 
+ #                 position = position_jitter(height = 0, width = 0.5))+
+  geom_line(data = df_len_summary, aes(y = mean)) + 
+  scale_y_log10(labels = scales::label_percent(accuracy = 0.01)) +
+  scale_x_continuous(breaks = c(74,90,104,120))+
+  scale_colour_viridis_d(limits = c('galK','hisA','metA','leuD')) + scale_fill_viridis_d(limits = c('galK','hisA','metA','leuD')) +
+  labs(x = "Targeting oligo length (nt)", y = "Efficiency", color = NULL)
+
+plot_to_len
+```
+
+
+# Fig. 2D - Leading vs. Lagging strand TO
+
+This experiment tested targeting oligos binding the leading or lagging strand at each locus. 120 nt TOs were used. Let's read in the data:
+
+```{r}
+
+df_lag <- read_csv('../../data/low_throughput_experiments/2022_03_07_leading_lagging_data.csv') %>% #read in csv
+  mutate(eff = Kan_count / LB_count) %>% group_by(locus, strand) %>% mutate(avg_eff = mean(eff)) %>% #calculate efficiency and average efficiency for replicates
+  mutate(locus = factor(locus, levels = c('galK','hisA','metA','leuD','pInt only'))) %>% 
+  mutate(strand = factor(strand, levels = c('leading','lagging','none')))
+
+df_lag %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+Now let's plot:
+
+```{r}
+
+#Get negative control values
+lag_pInt <- (df_lag %>% filter(strand=='none'))$avg_eff[1]
+
+#Plot individual replicates, mean points and crossbars and negative control values.
+plot_lag <- ggplot(df_lag %>% filter(strand!='none'), aes(x = strand, y = eff, color = locus)) + 
+  geom_hline(yintercept = lag_pInt, color = 'light gray', linetype = 2)+
+  geom_point(position = position_dodge(width = 1), alpha =0.4, fill = NA, shape = 21) +
+  stat_summary(fun = 'mean', geom = 'crossbar',position = position_dodge(width = 1), width = 0.5, size = 0.25)+
+  stat_summary(fun = 'mean', geom = 'point',position = position_dodge(width = 1), width = 0.5)+
+  facet_grid(~locus)+
+  scale_color_viridis_d()+
+  scale_y_log10(labels = scales::label_percent(accuracy = 0.001), breaks = c(0.0001, 0.001,0.01)) +
+  scale_x_discrete(labels = c('lead','lag'))+
+  labs(y = 'Efficiency', x = 'Targeting oligo strand', color = NULL)+guides( color = 'none')+
+  theme(panel.border = element_rect(color = 'black', fill = NA))
+  
+plot_lag
+```
+
+# Fig. 2E - Targeting oligo concentration
+
+This experiment tested the effect of TO concentration (final in 50 µL cell aliquots). Standard 120 nt TOs were used for each locus. Let's read in the data: 
+
+```{r}
+df_to_conc <- read_csv("../../data/low_throughput_experiments/2022_09_28_TO_conc_4_loci_data.csv")%>% 
+  mutate(eff = Kan_count / LB_count) %>% 
+  group_by(TO_conc, locus, condition) %>% 
+  mutate(avg_eff = mean(eff, na.rm = T)) %>% #calculate efficiency and average efficiency for replicates
+  mutate(locus = factor(locus, levels = c('galK','hisA','metA','leuD')))
+
+
+df_to_conc %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+```
+
+Let's plot the data:
+
+```{r}
+
+#Calculate negative control value
+to_conc_pInt <- (df_to_conc %>% filter(condition == 'pInt only'))$avg_eff[1]
+
+#Plot with individual observations, mean points and connecting lines
+plot_to_conc <- ggplot(df_to_conc %>% filter(TO_conc>0), aes(x = TO_conc, y = avg_eff, color = locus)) + 
+  geom_hline(yintercept = to_conc_pInt, linetype = 2, color = 'light gray')+
+  geom_jitter(aes(y = eff), shape = 21, alpha = 0.4, width = 0.1, height = 0)+
+  geom_point() + geom_line() + scale_x_log10(breaks = c(10,100,1000,4000), labels = c('10 nM', '100 nM', '1 µM','4 µM')) + scale_color_viridis_d() + 
+  scale_y_continuous(labels = scales::label_percent(), trans = 'log10', breaks = c(0.001, 0.0001, 0.00001), limits = c(0.00001,NA))+
+  labs(y = 'Efficiency',x = 'Targeting oligo concentration')
+
+plot_to_conc
+```
+
+# Fig. 2F - Integrating plasmid added
+
+This experiment tested the effect of how much integrating plasmid (pInt_attP1_kanR) was added to the ORBIT transformation. Let's read in the data:
+
+```{r}
+
+df_pint_conc <- read_csv('../../data/low_throughput_experiments/2022_03_31_pInt_conc_galK_hisA_data.csv') %>% #read in csv
+  mutate(eff = Kan_count / LB_count) %>% group_by(pInt_ng, TO_added, locus) %>% mutate(avg_eff = mean(eff, na.rm = T)) #calculate efficiency and average efficiency for replicates
+
+df_pint_conc %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+Note that the second hisA 100ng data point is NA because it came back as zero colonies on the plate, which was an obvious error.
+
+```{r}
+plot_pint_conc <- ggplot(df_pint_conc, aes(x = pInt_ng, y = eff, color = locus )) + 
+  geom_path(data = df_pint_conc %>% group_by(pInt_ng, TO_added,locus, avg_eff) %>% summarise(), 
+            aes(x = pInt_ng, y = avg_eff, group = locus), size = 0.5) +
+    geom_jitter(shape = 21, width = 0.025, height = 0, alpha = 0.4) +
+  geom_point(data = . %>% filter(replicate==1), aes(y = avg_eff))+
+  scale_color_manual(values = c("#440154FF","#21908CFF", 'light gray'), labels = c('galK','hisA','control'))+
+  scale_x_log10()+
+  scale_y_log10(labels = scales::label_percent(accuracy = 0.0001))+
+  labs(x = 'Integrating plasmid concentration (ng) ', y ='Efficiency', fill = 'Locus')
+
+plot_pint_conc
+```
+
+# Fig. 2G - Arabinose Recovery Levels
+
+This experiment tested the effect of arabinose (bxb-1 inducer for pHelper-Ec1-gentR) in a 1 hr recovery culture. Let's read in the data:
+
+```{r}
+
+df_ara <- read_csv('../../data/low_throughput_experiments/2022_06_21_arabinose_levels_data.csv') %>% #read in csv
+  mutate(eff = Kan_count / LB_count) %>% group_by(arabinose_per, locus) %>% mutate(avg_eff = mean(eff)) #calculate efficiency and average efficiency for replicates
+
+df_ara %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+Now let's plot:
+
+```{r}
+plot_ara <- ggplot(df_ara, aes(x = factor(arabinose_per), y = eff, color = locus )) + 
+  geom_path(data = df_ara %>% group_by(arabinose_per,locus, avg_eff) %>% summarise(), 
+            aes(x = factor(arabinose_per), y = avg_eff,group = locus), size = 0.5) +
+    geom_jitter(shape = 21, width = 0.025, height = 0, alpha = 0.4) + 
+  geom_point(data = . %>% filter(replicate ==1), aes(y = avg_eff))+
+  scale_fill_viridis_d(labels = c('galK','hisA','control'))+
+  scale_color_manual(values = c("#440154FF","#21908CFF", 'light gray'), labels = c('galK','hisA','control'))+
+  scale_y_log10(labels = scales::label_percent(accuracy = 0.001))+
+  labs(x = 'Arabinose %', y ='Efficiency', fill = 'Locus')
+
+plot_ara
+
+```
+
+# Fig. 2H - Recovery time
+
+This experiment tested the effect of recoverying in arabinose following the ORBIT transformation for different periods of time. 
+
+```{r}
+df_timing <- read_csv('../../data/low_throughput_experiments/2022_07_13_recovery_time_data.csv') %>% #read in csv
+  mutate(eff = Kan_count / LB_count) %>% group_by(rec_time, locus) %>% mutate(avg_eff = mean(eff, na.rm = T))#calculate efficiency and average efficiency for replicates
+
+df_timing %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+```
+
+You can see from the table, at zero hrs no colonies were recovered in any of the conditions. These points are not visible on the log scale of the plot, but they were indeed measured. Let's plot:
+
+```{r}
+plot_timing <- ggplot(df_timing, aes(x = factor(rec_time), y = eff, color = locus )) + 
+  geom_path(data = df_timing %>% group_by(rec_time,locus, avg_eff) %>% summarise(), 
+            aes(x = factor(rec_time), y = avg_eff, group = locus), size = 0.5) +
+  geom_jitter(shape = 21, width = 0.025, height = 0, alpha =0.4) + 
+  geom_point(data = . %>% filter(replicate ==1), aes(y=avg_eff))+
+  scale_color_manual(values = c("#440154FF","#21908CFF", 'light gray'), labels = c('galK','hisA','control'))+
+  scale_y_log10(labels = scales::label_percent(accuracy = 0.001))+
+  scale_x_discrete(labels = c(  '0 min', '30 min', '1 hr', '3 hr', '6 hr'))+
+  labs(x = 'Recovery time', y ='Efficiency', fill = 'Locus')
+
+plot_timing
+
+```
+
+# Create Fig. 2
+
+```{r}
+theme_set(theme_figure())
+
+plot_cond_legend <- plot_grid(plot_cond, plot_cond_labs, ncol = 1, rel_heights = c(3,1), rel_widths = c(1,1), 
+                   align = 'hv', axis = 'lr', scale = 0.9)
+
+fig_2_bottom <- plot_grid(plot_to_len + guides(color = 'none', fill = 'none'), plot_lag+ guides(shape = 'none'),
+                   plot_to_conc+ guides(color = 'none', fill = 'none'),plot_pint_conc+ guides(color = 'none'), 
+                   plot_ara + guides(color = 'none'), plot_timing+ guides(color = 'none'), 
+                   ncol = 2, rel_heights = c(1,1), rel_widths = c(1,1), 
+                   align = 'hv', axis = 'lr', scale = 0.9,
+                   labels = c('C','D','E','F','G','H'))
+
+fig_2 <- plot_grid(plot_cond_legend, fig_2_bottom, ncol = 1, rel_heights = c(1,3), scale = 1.0, labels = c('B'))
+
+
+fig_2
+
+save_plot("../../figures/r_pdf_figs/main_figs/fig_2_optimization.pdf", fig_2, base_width = 7, base_height = 7)
+```
+
+
+-------
+
+```{r}
+
+sessionInfo()
+
+```

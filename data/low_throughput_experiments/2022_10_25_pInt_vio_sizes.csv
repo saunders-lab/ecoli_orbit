@@ -1,0 +1,13 @@
+﻿condition,to,plasmid_size,replicate,LB_count,Kan_count
+p265 + pInt_kan,265,1958,1,1140000,490
+p265 + pInt_kan,265,1958,2,1120000,450
+p265 + pInt_vioA,265,3628,1,1080000,590
+p265 + pInt_vioA,265,3628,2,1080000,640
+p265 + pInt_vioAB,265,6718,1,1120000,360
+p265 + pInt_vioAB,265,6718,2,1220000,210
+p265 + pInt_vioABC,265,8203,1,1210000,53
+p265 + pInt_vioABC,265,8203,2,1280000,51
+pInt_vioABC only,control,8203,1,1040000,2
+p265 + pInt_luxR_vioAE,265,10671,1,1290000,32
+p265 + pInt_luxR_vioAE,265,10671,2,1130000,24
+pInt_luxR_vioAE only,control,10671,1,1400000,0

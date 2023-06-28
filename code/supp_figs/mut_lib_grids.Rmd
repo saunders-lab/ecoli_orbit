@@ -1,0 +1,238 @@
+---
+title: "Figure S11-13:Full mutant library grids"
+subtitle: 'E. coli ORBIT 2022'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+
+# Notes
+
+This figure contains data from many different experiments that were used to optimize the protocol for ORBIT. 
+
+----
+
+Setup packages and plotting for the notebook:
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+# Check packages
+source("../tools/package_setup.R")
+# Load packages
+library(tidyverse)
+library(cowplot)
+library(kableExtra)
+library(ggrastr)
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+# Load plotting tools
+source("../tools/plotting_tools.R")
+#Modify the plot theme
+theme_set(theme_figure())
+```
+
+-----
+
+```{r}
+
+df_read_nearest_down <- read_csv('../../data/seq_data/left_side_TO_libs/df_read_nearest_left.csv')
+df_read_nearest_up <- read_csv('../../data/seq_data/right_side_TO_libs/df_read_nearest_right.csv')
+df_read_nearest_up_down <- bind_rows(df_read_nearest_up %>% mutate(up_down = 'up'),df_read_nearest_down %>%  mutate(up_down = 'down')) %>% 
+  mutate(off_target = ifelse(min_val >500, T, F)) %>% 
+  mutate(perfect = ifelse(min_val == 0, T, F))
+
+df_read_nearest_up_down
+```
+
+```{r}
+df_read_nearest_up_down_org <- df_read_nearest_up_down %>% 
+  arrange(lib,gene_id, up_down, perfect, width ) %>% 
+  group_by(lib,gene_id, up_down, perfect) %>% 
+  mutate(read_num = row_number())
+
+df_read_nearest_up_down_org
+```
+
+```{r}
+df_TOs <- read_csv("../../../ecoli_ORBIT_paper_final/data/seq_data/right_side_TO_libs/df_TOs.csv")
+df_TOs
+
+```
+
+```{r}
+df_genes <- read_delim("../../../ecoli_ORBIT_paper_final/data/seq_data/All_instances_of_Genes_in_Escherichia_coli_K-12_substr._MG1655.txt") %>% 
+  mutate(left_pos = `Left-End-Position`, right_pos = `Right-End-Position`) %>% 
+  select(-`Left-End-Position`, -`Right-End-Position`) %>% 
+  mutate(fwd = ifelse(Direction =='+', T, F))
+
+df_genes_lib <- left_join(df_TOs %>% select(lib, 'gene_id'='gene'), df_genes, by = c('gene_id'='Genes'))
+
+df_genes_lib
+```
+
+```{r}
+df_poly <- df_genes_lib %>% 
+ #filter(right_pos<20000) %>% 
+ pivot_longer(c(left_pos, right_pos), values_to = 'x_pos', names_to = 'left_right') %>% 
+ mutate( y_pos_bottom = 10,y_pos_top = 100, y_pos_center=31.623) %>% 
+ pivot_longer(c(y_pos_bottom,y_pos_top, y_pos_center), values_to = 'y_pos', names_to = 'top_bottom') %>% 
+ mutate(x_pos = ifelse(left_right == 'left_pos' & Direction == '-' & top_bottom !='y_pos_center', x_pos + 50, x_pos)) %>% 
+ mutate(x_pos = ifelse(left_right == 'right_pos' & Direction == '+' & top_bottom !='y_pos_center', x_pos - 50, x_pos)) %>% 
+ mutate(point_num = case_when(left_right == 'left_pos' & top_bottom == 'y_pos_bottom' ~ 1,
+left_right == 'left_pos' & top_bottom == 'y_pos_center' ~ 2,
+left_right == 'left_pos' & top_bottom == 'y_pos_top' ~ 3,
+left_right == 'right_pos' & top_bottom == 'y_pos_top' ~ 4,
+left_right == 'right_pos' & top_bottom == 'y_pos_center' ~ 5,
+left_right == 'right_pos' & top_bottom == 'y_pos_bottom' ~ 6)) %>% 
+ arrange(gene_id, point_num)
+
+df_poly
+```
+- gene arrows
+- coordinate labels
+- y axis counts
+- different color or axis for off target
+
+```{r}
+
+ kb_label <- function(x){
+ # from s to ns
+ lab <- paste(x / 1000)
+ }
+
+plot_all <- ggplot()+
+  geom_rect(data = df_TOs %>% select(lib, gene_id = gene, left_oligo_pos, right_oligo_pos) %>% filter( lib == 1),
+                     aes(xmin = left_oligo_pos, xmax = right_oligo_pos, ymin = 0, ymax = 50), fill = 'light gray')+
+  geom_segment(data = df_read_nearest_down %>% filter(lib==1) %>% filter(min_val <500),
+               aes(x = start, xend = end, y = width, yend = width ),
+               #position = position_jitter(height = 75),
+               alpha = 0.01)+
+  geom_segment(data = df_read_nearest_up%>% filter(lib==1) %>% filter(min_val <500),
+             aes(x = start, xend = end, y = width, yend = width ),
+             #position = position_jitter(height = 75),
+             alpha = 0.01)+
+  scale_x_continuous(labels = scales::label_comma())+
+  scale_y_continuous(breaks = c(0,40,80), limits = c(0,100))+
+  labs(x = "Genomic position (bp)", y = 'Mapped read lengths (bp)')+
+  guides(fill = 'none')+
+  facet_wrap(~gene_id, scales = 'free', ncol = 8,strip.position = 'top')
+
+plot_all <- ggplot()+
+  geom_polygon(data = df_poly %>% filter(gene_id %in% c('alpA','argR','arsR')), aes(x = x_pos, y = y_pos, group = gene_id),fill = 'light gray')+
+  geom_segment(data = df_read_nearest_up_down_org%>% filter(gene_id %in% c('alpA','argR','arsR')) %>% filter(min_val <500),
+             aes(x = start, xend = end, y = read_num, yend = read_num, color = perfect), alpha = 0.25)+
+  labs(x = "Genomic position (Kb)", y = 'Mapped read lengths (bp)')+
+   scale_x_continuous(labels = kb_label)+
+  scale_y_log10()+
+  guides(fill = 'none')+
+  facet_wrap(~gene_id, scales = 'free_x', ncol = 8,strip.position = 'top')
+
+```
+
+# Fig. SX - IDT oPool
+
+```{r}
+plot_lib_0 <- ggplot()+
+  geom_polygon(data = df_poly %>% filter(lib == 0), aes(x = x_pos, y = y_pos, group = gene_id),fill = 'light gray')+
+    rasterise(geom_segment(data = df_read_nearest_up_down_org%>% filter(lib == 0) %>% filter(min_val <500),
+             aes(x = start, xend = end, y = read_num, yend = read_num, color = perfect), alpha = 0.25, linewidth = 0.5), dpi = 2000, dev = "cairo")+
+  labs(x = "Genomic position (Kb)", y = 'Read_count')+
+   scale_x_continuous(labels = kb_label,breaks = scales::extended_breaks(n=3))+
+  scale_y_log10(limits =c(1, NA))+
+  guides(fill = 'none')+
+  facet_wrap(~gene_id, scales = 'free', ncol = 8,strip.position = 'top') + guides(color = 'none')
+
+plot_lib_0
+
+save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_0.pdf",plot_lib_0, base_height = 4, base_width = 8)
+```
+
+
+# Fig. SX - Lib #1 - short TFs
+
+```{r}
+plot_lib_1 <- ggplot()+
+  geom_polygon(data = df_poly %>% filter(lib == 1), aes(x = x_pos, y = y_pos, group = gene_id),fill = 'light gray')+
+  rasterise(geom_segment(data = df_read_nearest_up_down_org%>% filter(lib == 1) %>% filter(min_val <500),
+             aes(x = start, xend = end, y = read_num, yend = read_num, color = perfect), alpha = 0.25, linewidth = 0.5), dpi = 2000, dev = "cairo")+
+  labs(x = "Genomic position (Kb)", y = 'Read count')+
+   scale_x_continuous(labels = kb_label,breaks = scales::extended_breaks(n=3))+
+  scale_y_log10(limits =c(1, NA))+
+  guides(fill = 'none')+
+  facet_wrap(~gene_id, scales = 'free', ncol = 8,strip.position = 'top') + guides(color = 'none')
+
+plot_lib_1
+
+save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_1.pdf",plot_lib_1, base_height = 10, base_width = 8)
+```
+
+# Fig. SX - Lib #2 - long TFs
+
+```{r}
+plot_lib_2 <- ggplot()+
+  geom_polygon(data = df_poly %>% filter(lib == 2), aes(x = x_pos, y = y_pos, group = gene_id),fill = 'light gray')+
+  rasterise(geom_segment(data = df_read_nearest_up_down_org%>% filter(lib == 2) %>% filter(min_val <500),
+             aes(x = start, xend = end, y = read_num, yend = read_num, color = perfect), alpha = 0.25, linewidth = 0.5), dpi = 2000, dev = "cairo")+
+  labs(x = "Genomic position (Kb)", y = 'Read_count')+
+   scale_x_continuous(labels = kb_label,breaks = scales::extended_breaks(n=3))+
+  scale_y_log10(limits =c(1, NA))+
+  guides(fill = 'none')+
+  facet_wrap(~gene_id, scales = 'free', ncol = 8,strip.position = 'top') + guides(color = 'none')
+
+plot_lib_2
+
+save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_2.pdf",plot_lib_2, base_height = 20, base_width = 8)
+```
+
+# Fig. SX - Lib #3 - sRNAs
+
+```{r}
+plot_lib_3 <- ggplot()+
+  geom_polygon(data = df_poly %>% filter(lib == 3), aes(x = x_pos, y = y_pos, group = gene_id),fill = 'light gray')+
+  rasterise(geom_segment(data = df_read_nearest_up_down_org%>% filter(lib == 3) %>% filter(min_val <500),
+             aes(x = start, xend = end, y = read_num, yend = read_num, color = perfect), alpha = 0.25, linewidth = 0.5), dpi = 2000, dev = "cairo")+
+  labs(x = "Genomic position (Kb)", y = 'Read_count')+
+   scale_x_continuous(labels = kb_label,breaks = scales::extended_breaks(n=3))+
+  scale_y_log10(limits =c(1, NA))+
+  guides(fill = 'none')+
+  facet_wrap(~gene_id, scales = 'free', ncol = 8,strip.position = 'top') + guides(color = 'none')
+
+plot_lib_3
+
+save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_3.pdf",plot_lib_3, base_height = 10, base_width = 8)
+```
+
+
+```{r}
+
+
+
+
+
+
+
+
+plot_poly <- ggplot(df_poly %>% filter(x_pos > g_left_pos-2000 & x_pos < g_right_pos+2000), 
+ aes(x = x_pos, y = y_pos, label = Genes, group = Genes)) + 
+ geom_hline(yintercept = 1, size = 1)+
+ geom_segment(x = TO_left_pos, xend = TO_left_pos, y = 0.75, yend = 1, size = 0.5, color = 'light gray')+
+ geom_segment(x = TO_right_pos, xend = TO_right_pos, y = 0.75, yend = 1, size = 0.5, color = 'light gray')+
+ geom_label_repel(data = . %>% distinct(Genes, center_pos),aes(x = center_pos, y = 1),
+box.padding = 0.5,min.segment.length=0,size = 3, ylim = c(1.05, NA), 
+direction = 'y', segment.size = 0.25, segment.linetype = 1, segment.color = 'light gray')+
+ geom_polygon_interactive(aes(tooltip = long_tooltip, data_id = Genes),
+fill = 'light gray', color = 'black', rule = 'winding', size = 0.5) + 
+ geom_segment(x = TO_left_pos, xend = TO_right_pos, y = 0.75, yend = 0.75, linetype = 2, color = '#D55E00')+
+ geom_segment(x = TO_left_pos, xend = TO_right_pos, y = 0.75, yend = 0.75, linetype = 2, color = '#D55E00')+
+ geom_segment(x = TO_left_pos, xend = TO_left_pos-41, y = 0.75, yend = 0.75, linetype = 1, color = '#E69F00')+
+ geom_segment(x = TO_right_pos, xend = TO_right_pos + 41, y = 0.75, yend = 0.75, linetype = 1, color = '#56B4E9')+
+ geom_point(x = TO_left_pos, y = 0.75, size = 3, shape = 21, fill = '#E69F00')+
+ geom_point(x = TO_right_pos, y = 0.75, size = 3, shape = 21, fill = '#56B4E9')+
+ labs(x = 'Genomic position (kb)', y = NULL) + 
+ scale_x_continuous(labels = kb_label) + ylim(0.5,1.5) + coord_cartesian(xlim = c(g_left_pos-500, g_right_pos + 500)) + 
+ theme(axis.text.y = element_blank(), panel.grid = element_blank(), axis.ticks.y = element_blank())
+```

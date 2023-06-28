@@ -1,0 +1,13 @@
+﻿condition,locus,deletion_size,pInt_only,replicate,permissive_colonies,selective_colonies
+galK_1kb,galK,1122,F,1,8,0
+galK_1kb,galK,1122,F,2,8,0
+galK_4kb,galK,4258,F,1,8,0
+galK_4kb,galK,4258,F,2,8,1
+galK_10kb,galK,10762,F,1,8,1
+galK_10kb,galK,10762,F,2,8,1
+galK_24kb,galK,24027,F,1,8,0
+galK_24kb,galK,24027,F,2,8,0
+galK_49kb,galK,49068,F,1,8,1
+galK_49kb,galK,49068,F,2,8,1
+pInt_only,galK,-,T,1,8,8
+pInt_only,galK,-,T,2,8,7

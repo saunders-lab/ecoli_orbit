@@ -1,0 +1,435 @@
+---
+title: "Seq data processing: Left side TO libs"
+subtitle: 'E. coli ORBIT 2022'
+author: 'Scott H. Saunders'
+output: 
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+```{r warning=FALSE, message=FALSE}
+library(tidyverse)
+library(GenomicAlignments)
+library(kableExtra)
+
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+
+source("../tools/plotting_tools.R")
+theme_set(theme_notebook())
+```
+
+Four different ORBIT mutant libraries were constructed using targeting oligo pools. These different deletion libraries were as follows:
+
+-   Library #0: galK, hisA, metA, leuD (gold standards) + 23 TF genes (27 targets total)
+
+-   Library #1: All TF genes \< 575 bp (76 targets total)
+
+-   Library #2: All TF genes \> 575 bp (226 targets total)
+
+-   Library #3: All small RNA genes (90 targets total)
+
+Within each library the targeting oligo deletes a target gene, and pInt_kanR should integrate into the newly formed attB site on the genome. This should leave us with a library with the target genes deleted, replaced by the pInt_kanR backbone flanked by the attR and attL sites. To test the accuracy with which these libraries were constructed sequencing libraries were prepared to amplify these genome-pInt junctions. This was done by shearing genomic DNA, adding C tails to free DNA ends and then amplifying junctions with a polyG and pInt specific primer. This notebook processes the raw fastq sequencing files (direct from MiSeq) into a more usable form of reads that are filtered and trimmed to map to the *E. coli* genome. Then by looking at where these junction reads start (following the pInt sequence) we can determine if the ORBIT mutations were created accurately.
+
+The structure of this data processing is shown below. This processing script lives in the `code` folder under `seq_data_processing` and it processes raw data files that live in `data/seq_data/left_side_TO_libs`. The processing starts from `0_raw_fastq` (which houses truly raw data) and proceeds to filter for quality using fastp (`1_fastp_output`), then the pInt_kanR sequence that is common to all mutants is found and trimmed off along with the polyC tail using cutadapt (`2_cutadapt_output`). At this stage filtered and trimmed reads should be the flanking E. coli genomic sequences for each mutant, so we map these reads to the E. coli genome with bowtie2 (`3_bowtie_ecoli_output`). Finally, we examine some of the reads that don't map by seeing if they still map to the pInt_kanR plasmid even after the previous steps (`4_bowtie_pInt_output`) and also check if they map to the phiX loading control that we use on the Miseq (`bowtie_phiX_output`).
+
+After all this, we will convert these various sets of reads into bam files and then into a more usable form for analysis - the final dataframe: `df_to_libs_left_all_reads.csv`
+
+    ├── code
+    │   ├── seq_data_processing
+    │   │   ├── left_side_TO_libs_processing.Rmd
+    ├── data
+    │   ├── seq_data
+    │   │   ├── left_side_TO_libs
+    │   │   │   ├── 0_raw_fastq
+    │   │   │   ├── 1_fastp_output
+    │   │   │   ├── 2_cutadapt_output
+    │   │   │   ├── 3_bowtie_ecoli_output
+    │   │   │   ├── 4_bowtie_pInt_output
+    │   │   │   ├── 5_bowtie_phiX_output
+    │   │   │   ├── 6_bam_files
+    │   │   │   ├── df_to_libs_left_all_reads.csv
+    ├── figures
+
+# Step 0: Bioinformatics environment setup
+
+This complicated setup is required the first time for m1 macs only, which must run certain programs in an intel like environment. Note that it gets a little funky running bash from rmd, so it may be more straightforward for the user to run bash commands in the terminal or windows equivalent. However, this setup works on multiple machines for the author at the current time.
+
+This setup assumes you already have bash and conda in addition to R/rmd.
+
+```{bash, eval = F}
+source ~/.bash_profile
+
+#**first time running scripts, create conda env**
+# use code below when running on *m1 mac* to setup intel like env
+# see stack overflow: https://stackoverflow.com/questions/71515117/how-to-set-up-a-conda-osx-64-environment-on-arm-mac
+conda create -n bioinfo_env -y
+
+conda activate bioinfo_env
+
+conda config --env --set subdir osx-64
+
+conda install python=3.7 -y
+
+conda install -n bioinfo_env fastp cutadapt bowtie2 samtools starcode --channel bioconda -y
+```
+
+For normal, non-m1 mac conda environment setup:
+
+```{bash, eval = F}
+source ~/.bash_profile
+  
+#**for normal conda install using this code first time**
+conda create -n bioinfo_env fastp cutadapt samtools bowtie2 starcode -y --channel bioconda
+
+```
+
+With our `bioinfo_env` setup we are ready to process the data. Note, when running bash scripts in rmd, we have found that we must activate the conda env in each code chunk and also source our bash profile to get things to work correctly.
+
+# Step 1: Fastp quality filter
+
+Looking at the raw data, (`0_raw_fastq`), you can see that these were actually paired end sequencing runs. However, from looking at the data, read2 quality is very low, so we will focus on the higher quality read1 data, which starts from the pInt_kanR backbone and sequences out into the genome (instead of read2 sequencing in from the polyC tail).
+
+Here, we will use the program fastp, with defaults to filter out very low quality reads, and also to get a nice summary of the seq libraries.
+
+```{bash, eval = F}
+source ~/.bash_profile
+conda activate bioinfo_env
+
+cd ../../data/seq_data/left_side_TO_libs/
+
+fastp -i "0_raw_fastq/lib-0-IDToPool_S1_L001_R1_001.fastq.gz" -o "1_fastp_output/lib_0_left_fastp.fastq.gz" -h "1_fastp_output/lib_0_left_report.html" --json /dev/null
+
+fastp -i "0_raw_fastq/lib-1-twist-TFavdovlp-short_S2_L001_R1_001.fastq.gz" -o "1_fastp_output/lib_1_left_fastp.fastq.gz" -h "1_fastp_output/lib_1_left_report.html" --json /dev/null
+
+fastp -i "0_raw_fastq/lib-2-twist-TFavdovlp-long_S3_L001_R1_001.fastq.gz" -o "1_fastp_output/lib_2_left_fastp.fastq.gz" -h "1_fastp_output/lib_2_left_report.html" --json /dev/null
+
+fastp -i "0_raw_fastq/lib-3-twist-sRNA_S4_L001_R1_001.fastq.gz" -o "1_fastp_output/lib_3_left_fastp.fastq.gz" -h "1_fastp_output/lib_3_left_report.html" --json /dev/null
+
+```
+
+Please see the nice html reports in `1_fastp_output`. The main takeaway is the total number of reads we are working with and their quality:
+
+-   Lib #0: 44k reads
+
+-   Lib #1: 137k reads
+
+-   Lib #2: 87k reads
+
+-   Lib #3: 94k reads
+
+For all 4 libraries, \>98% of reads pass the quality filter. \~80% of remaining reads are Q30 or above. These total read counts may seem low, please note that this was a MiSeq nano kit and the loading was not optimal. However, these read counts are perfectly sufficient to quantify 400 mutants.
+
+# Step 2: Cutadapt trimming
+
+The next step in the processing pipeline is to trim off the ORBIT plasmid sequence and the polyC tail used in library prep. To do this we will use the 'linked adapter' option from cutadapt. I experimented with a few options and this works way better than unlinked. This linked adapter is called with the option `-a 5'ADAPTER...3'ADAPTER` . Note the polyC tail is specified as 8x C's `C{8}`. In looking at the fastq files there are many reads that have way way longer polyC tails, but this cutadapt scheme should trim everything 3' of the first instance of 8 Cs following the 5' adapter. Note that the PCR1 reverse primer that is polyG contains 1N, because of ordering issues from sigma. Therefore many of the polyC tails are not perfect. For this reason and because the ORBIT adapter needs to be robustly found, I increased the error tolerance from the standard 10% to 20% (`e 0.2`). This means that for the polyC tail only 1-2 nt cannot be C.
+
+After trimming adapter the remaining genomic regions will be mapped to the E. coli genome, so I'm also passing a length cutoff of at least 20bp for the trimmed read `-m 20`. A read shorter than 20 bp will likely not be unique and probably shouldn't be trusted. This minimum length could be increased later to be more stringent.
+
+```{bash, eval = F}
+source ~/.bash_profile
+conda activate bioinfo_env
+
+cd ../../data/seq_data/left_side_TO_libs/
+
+cutadapt -a "ggaactattacacgtcttgagcgattggtttgtctggtcaaccaccgcggtctccgtcgtcaggatcat;e=0.2;required...C{8};e=0.2;optional" -n 1 -m 20 -e 0.2 --discard-untrimmed 1_fastp_output/lib_0_left_fastp.fastq.gz -o 2_cutadapt_output/lib_0_left_cutadpt.fastq.gz --report=minimal > 2_cutadapt_output/lib_0_left_cutadpt_report.tsv
+
+cutadapt -a "ggaactattacacgtcttgagcgattggtttgtctggtcaaccaccgcggtctccgtcgtcaggatcat;e=0.2;required...C{8};e=0.2;optional" -n 1 -m 20 -e 0.2 --discard-untrimmed 1_fastp_output/lib_1_left_fastp.fastq.gz -o 2_cutadapt_output/lib_1_left_cutadpt.fastq.gz --report=minimal > 2_cutadapt_output/lib_1_left_cutadpt_report.tsv
+
+cutadapt -a "ggaactattacacgtcttgagcgattggtttgtctggtcaaccaccgcggtctccgtcgtcaggatcat;e=0.2;required...C{8};e=0.2;optional" -n 1 -m 20 -e 0.2 --discard-untrimmed 1_fastp_output/lib_2_left_fastp.fastq.gz -o 2_cutadapt_output/lib_2_left_cutadpt.fastq.gz --report=minimal > 2_cutadapt_output/lib_2_left_cutadpt_report.tsv
+
+cutadapt -a "ggaactattacacgtcttgagcgattggtttgtctggtcaaccaccgcggtctccgtcgtcaggatcat;e=0.2;required...C{8};e=0.2;optional" -n 1 -m 20 -e 0.2 --discard-untrimmed 1_fastp_output/lib_3_left_fastp.fastq.gz -o 2_cutadapt_output/lib_3_left_cutadpt.fastq.gz --report=minimal > 2_cutadapt_output/lib_3_left_cutadpt_report.tsv
+
+```
+
+Now let's look at the output reports and make sure the trimming worked as expected.
+
+```{r}
+cutadapt_path <- '../../data/seq_data/left_side_TO_libs/2_cutadapt_output/'
+
+cut_lib_0 <- paste0(cutadapt_path,'lib_0_left_cutadpt_report.tsv')
+cut_lib_1 <- paste0(cutadapt_path,'lib_1_left_cutadpt_report.tsv')
+cut_lib_2 <- paste0(cutadapt_path,'lib_2_left_cutadpt_report.tsv')
+cut_lib_3 <- paste0(cutadapt_path,'lib_3_left_cutadpt_report.tsv')
+
+df_cutadapt <- bind_rows(read_delim(cut_lib_0, delim = '\t', skip = length(readLines(cut_lib_0))-2 ) %>% mutate(lib=0),
+          read_delim(cut_lib_1, delim = '\t', skip = length(readLines(cut_lib_1))-2 )%>% mutate(lib=1),
+          read_delim(cut_lib_2, delim = '\t', skip = length(readLines(cut_lib_2))-2 )%>% mutate(lib=2),
+          read_delim(cut_lib_3, delim = '\t', skip = length(readLines(cut_lib_3))-2 )%>% mutate(lib=3)) %>% 
+  mutate(frac_in_out = out_reads / in_reads, frac_w_adapt = `w/adapters` / in_reads, frac_too_short = too_short/in_reads)
+
+df_cutadapt %>% kable() %>% kable_styling()
+```
+
+Ok, so overall 64-73% of the input reads are being trimmed and output. About 94% have the "adapter" sequences, but a significant fraction of reads are below the minimum 20bp length after trimming and are therefore considered too short and not output (21-29%). This is likely just a function of the size distribution of the library. Let's look at this graphically:
+
+```{r}
+df_cutadapt_summary <- df_cutadapt %>% 
+  mutate(w_o_adapters = in_reads-`w/adapters`) %>% 
+  pivot_longer(c(too_short, out_reads, w_o_adapters), values_to = 'reads', names_to = 'fraction')
+  
+
+#ggplot(df_cutadapt_summary, aes(x = lib,y=reads, fill = fraction)) + geom_bar(position="stack", stat="identity") + scale_fill_viridis_d()
+
+ggplot(df_cutadapt_summary, aes(x = lib,y=reads, fill = fraction)) + geom_bar(position="fill", stat="identity") + scale_fill_viridis_d()
+```
+
+Here is the largest bottleneck in the entire pipeline, where we lose a significant portion of the reads due to them being too short following adapter trimming (`too_short`. This is likely because of the library prep strategy, which caused some fragments to have long c tails and shorter genomic fragments. However, the remaining reads now seem to be ready to go to answer our original question: how accurately are ORBIT mutants constructed. As a reminder these remaining reads (`out_reads` above) passed sequencing quality filters, they have the pInt_kanR backbone sequence, and they have at least 20bp of putative genomic sequence that should allow us to map back to the original ORBIT target genes.
+
+# Step 3: Bowtie alignment
+
+## Mapping to *E. coli* genome
+
+The next step is to align the trimmed reads to the *E. coli* genome. This should be an unbiased way to see how well the sequencing reads from our mutant library actually match the intended ORBIT deletions. I'm using the `--very-sensitive-local` mapping option. Earlier tests indicated that this gave the most reads mapping and manual inspection indicated that it was mapping correctly. This local option means only part of the read needs to align, not the whole thing. This may not be optimal, but seems necessary because some reads have remnants of the c-tail still present in read 1, which seemed to limit the standard alignment. The *E. coli* ref genome is built with the genome fasta file `MG1655_U000963.fasta` by simply calling `bowtie build MG1655_U000963.fasta ecoli_ref_genome` . Since we are only using the higher quality / more informative read1, I am using the `-U` option, signifying that all the input reads (from cutadapt) are unpaired. Bowtie will try to map the reads to the genome and save them as a sam file (`-S` option). I am also capturing the unmapped reads with the `--un` option, which will go to a different sam file. Finally, with the `2>file.txt` option, I'm taking the standard metrics bowtie outputs to the console and writing them to a text file, so we can keep track of the fate of each libraries reads with real numbers.
+
+```{bash, eval = F}
+source ~/.bash_profile
+conda activate bioinfo_env
+
+cd ../../data/seq_data/left_side_TO_libs/3_bowtie_ecoli_output/
+
+bowtie2-build --quiet MG1655_U000963.fasta ecoli_ref_genome 
+
+bowtie2 --very-sensitive-local -x ecoli_ref_genome -U ../2_cutadapt_output/lib_0_left_cutadpt.fastq.gz -S lib_0_left_mapped.sam --un lib_0_left_unmapped.sam 2> lib_0_left_bowtie.txt
+
+bowtie2 --very-sensitive-local -x ecoli_ref_genome -U ../2_cutadapt_output/lib_1_left_cutadpt.fastq.gz -S lib_1_left_mapped.sam --un lib_1_left_unmapped.sam 2> lib_1_left_bowtie.txt
+
+bowtie2 --very-sensitive-local -x ecoli_ref_genome -U ../2_cutadapt_output/lib_2_left_cutadpt.fastq.gz -S lib_2_left_mapped.sam --un lib_2_left_unmapped.sam 2> lib_2_left_bowtie.txt
+
+bowtie2 --very-sensitive-local -x ecoli_ref_genome -U ../2_cutadapt_output/lib_3_left_cutadpt.fastq.gz -S lib_3_left_mapped.sam --un lib_3_left_unmapped.sam 2> lib_3_left_bowtie.txt
+
+```
+
+Now let's look at the bowtie metrics text files to see how the alignments went.
+
+```{r}
+
+
+ecoli_bowtie_path <- '../../data/seq_data/left_side_TO_libs/3_bowtie_ecoli_output/'
+
+cut_lib_0 <- paste0(cutadapt_path,'lib_0_left_cutadpt_report.tsv')
+
+vec0 <- readLines(paste0(ecoli_bowtie_path,"lib_0_left_bowtie.txt"))
+vec1 <- readLines(paste0(ecoli_bowtie_path,"lib_1_left_bowtie.txt"))
+vec2 <- readLines(paste0(ecoli_bowtie_path,"lib_2_left_bowtie.txt"))
+vec3 <- readLines(paste0(ecoli_bowtie_path,"lib_3_left_bowtie.txt"))
+
+
+names <- c('input_reads','unpaired', 'zero_align','one_align','oneplus_align','overall_align_percent')
+
+bowtie_0 <- parse_number(vec0) %>% setNames(names)
+bowtie_1 <- parse_number(vec1) %>% setNames(names)
+bowtie_2 <- parse_number(vec2) %>% setNames(names)
+bowtie_3 <- parse_number(vec3) %>% setNames(names)
+
+df_bowtie_map_1 <- bind_rows(bowtie_0, bowtie_1,bowtie_2,bowtie_3)
+
+df_bowtie_map_1 %>% kable() %>% kable_styling()
+
+```
+
+For each of the libraries, the overall alignment percentage is 83-85% giving us 10s of thousands of mapped reads for each library. This also means that 15-17% of reads did not align, so we will briefly explore two explanations for what those reads could be.
+
+## Evaluate unmapped reads
+
+### Mapping to plasmid concatemers
+
+This cell will look complicated, but basically we just have to take the unmapped reads as a sam file (default output) and convert them back into a fastq file, so that we can use them as input for this next bowtie mapping step.
+
+```{bash, eval = F}
+source ~/.bash_profile
+conda activate bioinfo_env
+
+cd ../../data/seq_data/left_side_TO_libs/4_bowtie_pInt_output/
+
+#bowtie2-build --quiet pInt_kanR_half.fasta pInt_kanR_half
+
+bowtie2 --very-sensitive-local -x pInt_kanR_half -U ../3_bowtie_ecoli_output/lib_0_left_unmapped.sam -S lib_0_left_pIntKan_mapped.sam --un lib_0_left_pIntKan_unmapped.sam 2>lib_0_left_pInt_bowtie.txt
+
+bowtie2 --very-sensitive-local -x pInt_kanR_half -U ../3_bowtie_ecoli_output/lib_1_left_unmapped.sam -S lib_1_left_pIntKan_mapped.sam --un lib_1_left_pIntKan_unmapped.sam 2>lib_1_left_pInt_bowtie.txt
+
+bowtie2 --very-sensitive-local -x pInt_kanR_half -U ../3_bowtie_ecoli_output/lib_2_left_unmapped.sam -S lib_2_left_pIntKan_mapped.sam --un lib_2_left_pIntKan_unmapped.sam 2>lib_2_left_pInt_bowtie.txt
+
+bowtie2 --very-sensitive-local -x pInt_kanR_half -U ../3_bowtie_ecoli_output/lib_3_left_unmapped.sam -S lib_3_left_pIntKan_mapped.sam --un lib_3_left_pIntKan_unmapped.sam 2>lib_3_left_pInt_bowtie.txt
+
+```
+
+Again, let's check the mapping statistics.
+
+```{r}
+pInt_bowtie_path <- '../../data/seq_data/left_side_TO_libs/4_bowtie_pInt_output/'
+
+
+vec_p0 <- readLines(paste0(pInt_bowtie_path,"lib_0_left_pInt_bowtie.txt"))
+vec_p1 <- readLines(paste0(pInt_bowtie_path,"lib_1_left_pInt_bowtie.txt"))
+vec_p2 <- readLines(paste0(pInt_bowtie_path,"lib_2_left_pInt_bowtie.txt"))
+vec_p3 <- readLines(paste0(pInt_bowtie_path,"lib_3_left_pInt_bowtie.txt"))
+
+
+names <- c('input_reads','unpaired', 'zero_align','one_align','oneplus_align','overall_align_percent')
+
+bowtie_p0 <- parse_number(vec_p0) %>% setNames(names)
+bowtie_p1 <- parse_number(vec_p1) %>% setNames(names)
+bowtie_p2 <- parse_number(vec_p2) %>% setNames(names)
+bowtie_p3 <- parse_number(vec_p3) %>% setNames(names)
+
+df_bowtie_map_p1 <- bind_rows(bowtie_p0, bowtie_p1,bowtie_p2,bowtie_p3)
+
+df_bowtie_map_p1 %>% kable() %>% kable_styling()
+
+```
+
+So, some reads do map to the backbone of pInt_kanR suggesting they could be plasmid concatemers or other adapter / backbone sequences.
+
+### mapping to phiX
+
+Finally, we will check to see if any of our reads map to the phiX control library that was run alongside the sequencing libraries (10% final concentration)
+
+```{bash, eval = F}
+source ~/.bash_profile
+conda activate bioinfo_env
+
+cd ../../data/seq_data/left_side_TO_libs/5_bowtie_phiX_output/
+
+
+bowtie2-build --quiet phiX174.fasta phiX174
+
+bowtie2 --very-sensitive-local -x phiX174 -U ../4_bowtie_pInt_output/lib_0_left_pIntKan_unmapped.sam -S lib_0_left_phiX_mapped.sam --un lib_0_left_phiX_unmapped.sam 2>lib_0_left_phiX_bowtie.txt
+
+bowtie2 --very-sensitive-local -x phiX174 -U ../4_bowtie_pInt_output/lib_1_left_pIntKan_unmapped.sam -S lib_1_left_phiX_mapped.sam --un lib_1_left_phiX_unmapped.sam 2>lib_1_left_phiX_bowtie.txt
+
+bowtie2 --very-sensitive-local -x phiX174 -U ../4_bowtie_pInt_output/lib_2_left_pIntKan_unmapped.sam -S lib_2_left_phiX_mapped.sam --un lib_2_left_phiX_unmapped.sam 2>lib_2_left_phiX_bowtie.txt
+
+bowtie2 --very-sensitive-local -x phiX174 -U ../4_bowtie_pInt_output/lib_3_left_pIntKan_unmapped.sam -S lib_3_left_phiX_mapped.sam --un lib_3_left_phiX_unmapped.sam 2>lib_3_left_phiX_bowtie.txt
+
+```
+
+Let's look at metrics:
+
+```{r}
+phiX_bowtie_path <- '../../data/seq_data/left_side_TO_libs/5_bowtie_phiX_output/'
+
+
+vec_ph0 <- readLines(paste0(phiX_bowtie_path,"lib_0_left_phiX_bowtie.txt"))
+vec_ph1 <- readLines(paste0(phiX_bowtie_path,"lib_1_left_phiX_bowtie.txt"))
+vec_ph2 <- readLines(paste0(phiX_bowtie_path,"lib_2_left_phiX_bowtie.txt"))
+vec_ph3 <- readLines(paste0(phiX_bowtie_path,"lib_3_left_phiX_bowtie.txt"))
+
+
+names <- c('input_reads','unpaired', 'zero_align','one_align','oneplus_align','overall_align_percent')
+
+bowtie_ph0 <- parse_number(vec_ph0) %>% setNames(names)
+bowtie_ph1 <- parse_number(vec_ph1) %>% setNames(names)
+bowtie_ph2 <- parse_number(vec_ph2) %>% setNames(names)
+bowtie_ph3 <- parse_number(vec_ph3) %>% setNames(names)
+
+df_bowtie_map_ph1 <- bind_rows(bowtie_ph0, bowtie_ph1,bowtie_ph2,bowtie_ph3)
+
+df_bowtie_map_ph1 %>% kable() %>% kable_styling()
+
+```
+
+Very few reads align to phiX.
+
+## Output mapped reads
+
+Let's combine all of the mapped reads into a csv and look at a quick overview. We will convert all the files to bam for reading into R.
+
+```{bash, eval = F}
+source ~/.bash_profile
+conda activate bioinfo_env
+
+cd ../../data/seq_data/left_side_TO_libs/6_bam_files/
+
+samtools view -bh ../3_bowtie_ecoli_output/lib_0_left_mapped.sam > lib_0_left_mapped.bam
+samtools view -bh ../3_bowtie_ecoli_output/lib_1_left_mapped.sam > lib_1_left_mapped.bam
+samtools view -bh ../3_bowtie_ecoli_output/lib_2_left_mapped.sam > lib_2_left_mapped.bam
+samtools view -bh ../3_bowtie_ecoli_output/lib_3_left_mapped.sam > lib_3_left_mapped.bam
+
+samtools view -bh ../4_bowtie_pInt_output/lib_0_left_pIntKan_mapped.sam > lib_0_left_pIntKan_mapped.bam
+samtools view -bh ../4_bowtie_pInt_output/lib_1_left_pIntKan_mapped.sam > lib_1_left_pIntKan_mapped.bam
+samtools view -bh ../4_bowtie_pInt_output/lib_2_left_pIntKan_mapped.sam > lib_2_left_pIntKan_mapped.bam
+samtools view -bh ../4_bowtie_pInt_output/lib_3_left_pIntKan_mapped.sam > lib_3_left_pIntKan_mapped.bam
+
+samtools view -bh ../5_bowtie_phiX_output/lib_0_left_phiX_mapped.sam > lib_0_left_phiX_mapped.bam
+samtools view -bh ../5_bowtie_phiX_output/lib_1_left_phiX_mapped.sam > lib_1_left_phiX_mapped.bam
+samtools view -bh ../5_bowtie_phiX_output/lib_2_left_phiX_mapped.sam > lib_2_left_phiX_mapped.bam
+samtools view -bh ../5_bowtie_phiX_output/lib_3_left_phiX_mapped.sam > lib_3_left_phiX_mapped.bam
+
+samtools view -bh ../5_bowtie_phiX_output/lib_0_left_phiX_unmapped.sam > lib_0_left_phiX_unmapped.bam
+samtools view -bh ../5_bowtie_phiX_output/lib_1_left_phiX_unmapped.sam > lib_1_left_phiX_unmapped.bam
+samtools view -bh ../5_bowtie_phiX_output/lib_2_left_phiX_unmapped.sam > lib_2_left_phiX_unmapped.bam
+samtools view -bh ../5_bowtie_phiX_output/lib_3_left_phiX_unmapped.sam > lib_3_left_phiX_unmapped.bam
+
+
+```
+
+Now we can import the bam files.
+
+```{r}
+
+bam_path <- '../../data/seq_data/left_side_TO_libs/6_bam_files/'
+
+df_bam_0_1 <- readGAlignments(file = paste0(bam_path,"lib_0_left_mapped.bam")) %>% as_tibble() %>% mutate(lib=0, step = 1)
+df_bam_1_1 <- readGAlignments(file = paste0(bam_path,"lib_1_left_mapped.bam")) %>% as_tibble() %>% mutate(lib=1, step = 1)
+df_bam_2_1 <- readGAlignments(file = paste0(bam_path,"lib_2_left_mapped.bam")) %>% as_tibble() %>% mutate(lib=2, step = 1)
+df_bam_3_1 <- readGAlignments(file = paste0(bam_path,"lib_3_left_mapped.bam")) %>% as_tibble() %>% mutate(lib=3, step = 1)
+
+df_bam_0_2 <- readGAlignments(file = paste0(bam_path,"lib_0_left_pIntKan_mapped.bam")) %>% as_tibble() %>% mutate(lib=0, step = 2)
+df_bam_1_2 <- readGAlignments(file = paste0(bam_path,"lib_1_left_pIntKan_mapped.bam")) %>% as_tibble() %>% mutate(lib=1, step = 2)
+df_bam_2_2 <- readGAlignments(file = paste0(bam_path,"lib_2_left_pIntKan_mapped.bam")) %>% as_tibble() %>% mutate(lib=2, step = 2)
+df_bam_3_2 <- readGAlignments(file = paste0(bam_path,"lib_3_left_pIntKan_mapped.bam")) %>% as_tibble() %>% mutate(lib=3, step = 2)
+
+df_bam_0_3 <- readGAlignments(file = paste0(bam_path,"lib_0_left_phiX_mapped.bam")) %>% as_tibble() %>% mutate(lib=0, step = 3)
+df_bam_1_3 <- readGAlignments(file = paste0(bam_path,"lib_1_left_phiX_mapped.bam")) %>% as_tibble() %>% mutate(lib=1, step = 3)
+df_bam_2_3 <- readGAlignments(file = paste0(bam_path,"lib_2_left_phiX_mapped.bam")) %>% as_tibble() %>% mutate(lib=2, step = 3)
+df_bam_3_3 <- readGAlignments(file = paste0(bam_path,"lib_3_left_phiX_mapped.bam")) %>% as_tibble() %>% mutate(lib=3, step = 3)
+
+```
+
+We can combine all these reads from the different steps into one dataframe and save a csv.
+
+```{r}
+df_all_reads <- bind_rows(df_bam_0_1,df_bam_1_1,df_bam_2_1,df_bam_3_1,
+          df_bam_0_2,df_bam_1_2,df_bam_2_2,df_bam_3_2,
+          df_bam_0_3,df_bam_1_3,df_bam_2_3,df_bam_3_3)
+
+write_csv(df_all_reads, "../../data/seq_data/left_side_TO_libs/df_to_libs_left_all_reads.csv")
+
+df_all_reads %>% head(10) %>% kable() %>% kable_styling()
+```
+
+We will calculate some statistics about the read lengths at the different steps:
+
+```{r}
+df_all_summary <- df_all_reads %>% 
+  group_by(lib, step) %>% 
+  summarise(n=n(), mean_len = mean(qwidth), median_len = median(qwidth), sd_len = sd(qwidth))
+
+df_all_summary %>% kable() %>% kable_styling()
+```
+
+And we will view the read lengths for all 4 different libraries at the 3 different mapping steps.
+
+```{r}
+ggplot(df_all_reads, aes(x = factor(step),y=qwidth)) + geom_boxplot() + facet_wrap(~lib)
+
+```
+
+The only notable thing here is that the tiny number of reads aligning to phiX are long, probably because they didn't contain our pInt_kanR "adaper" sequence.
+
+Finally, let's look at the fate (number) of our reads across the different mapping steps.
+
+```{r}
+ggplot(df_all_summary, aes(x = lib,y=n, fill = factor(step))) + geom_bar(position="fill", stat="identity") + scale_fill_viridis_d()
+```
+
+So, the vast majority of the mapped reads mapped to the *E. coli* genome in step 1.
+
+These mapped reads will be further analyzed in the `left_side_TO_libs_analysis.Rmd` notebook.
+
+```{r}
+sessionInfo()
+```

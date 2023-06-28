@@ -1,0 +1,19 @@
+﻿locus,strand,replicate,LB_count,Kan_count
+galK,lagging,1,23000000,130000
+galK,lagging,2,29000000,190000
+galK,leading,1,27000000,310
+galK,leading,2,7300000,570
+hisA,lagging,1,30000000,460000
+hisA,lagging,2,27000000,380000
+hisA,leading,1,27000000,670
+hisA,leading,2,22000000,870
+metA,lagging,1,1140000,13500
+metA,lagging,2,1700000,11700
+metA,leading,1,1700000,1260
+metA,leading,2,1220000,1450
+leuD,lagging,1,970000,3400
+leuD,lagging,2,1080000,4100
+leuD,leading,1,1040000,330
+leuD,leading,2,1220000,310
+pInt only,none,1,1300000,153
+pInt only,none,2,2500000,110

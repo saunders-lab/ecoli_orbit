@@ -1,0 +1,200 @@
+---
+title: "TO abundance - analysis notebook"
+subtitle: 'E. coli ORBIT 2023'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(tidysq)
+library(Biostrings)
+
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+# Load plotting tools
+source("../../tools/plotting_tools.R")
+#Modify the plot theme
+theme_set(theme_notebook())
+```
+
+# Notes
+
+Recall that for the twist deletion libraries there were three different subpools, Library #1 = short TF gene deletions, Library #2 = long TFs, and Library #3 = small RNAs. Each subpool had different primer sites attached, so that they could be amplified and processed independently before ORBIT transformations. For these sequencing libraries, each subpool was amplifified and had illumina overhangs attached for direct sequencing of the targeting oligos (before ORBIT transformation). Therefore in this notebook we will analyze those reads to figure out if they are the expected length and match to the designed constructs. We will count how many reads match perfectly to each TO construct (see python notebooks in `twist_oligo_design`)  and then use that data to see if it explains the read abundance in the resulting ORBIT mutant libraries (Fig. 8).
+
+# Read in data
+
+Let's read in the fasta file of the quality filtered reads for the TO abundance experiments. 
+
+```{r}
+#df_fasta_1 <- read_fasta(file_name = "fastp_processed/lib_1_TOs.fasta")
+df_fasta_1 <- readDNAStringSet("../../../data/seq_data/twist_TO_abundance/fastp_processed/lib_1_TOs.fasta")
+df_fasta_1
+
+df_fasta_2 <- readDNAStringSet("../../../data/seq_data/twist_TO_abundance/fastp_processed/lib_2_TOs.fasta")
+df_fasta_2
+
+df_fasta_3 <- readDNAStringSet("../../../data/seq_data/twist_TO_abundance/fastp_processed/lib_3_TOs.fasta")
+df_fasta_3
+```
+
+# Evaluate read length
+
+We expect that the full amplicon length reads should be 179 bp. For each TO library (#1-3) let's look at the length distribution and the fraction of reads that are of the perfect length:
+
+```{r}
+df_lens_1 <- tibble(lens = width(df_fasta_1)) %>% count(lens)
+
+#df_lens_1
+
+ggplot(df_lens_1, aes(x = lens, y = n)) + geom_col()+ scale_y_log10()
+
+
+(df_lens_1 %>% filter(lens == 179))$n / sum(df_lens_1$n)
+
+df_lens_2 <- tibble(lens = width(df_fasta_2)) %>% count(lens)
+
+#df_lens_1
+
+ggplot(df_lens_2, aes(x = lens, y = n)) +geom_col() + scale_y_log10()
+
+(df_lens_2 %>% filter(lens == 179))$n / sum(df_lens_2$n)
+
+df_lens_3 <- tibble(lens = width(df_fasta_3)) %>% count(lens)
+
+#df_lens_1
+
+ggplot(df_lens_3, aes(x = lens, y = n)) +geom_col()+ scale_y_log10()
+
+
+(df_lens_3 %>% filter(lens == 179))$n / sum(df_lens_3$n)
+```
+So the dominant peak is at the correct length.
+
+# Count perfect TO matches
+
+Let's now read in our TO sequences that we designed.
+
+```{r}
+
+df_ao_short <- read_csv("../../twist_oligo_design/twist_orbit_tf_del_AO_short.csv")
+
+df_ao_long <- read_csv("../../twist_oligo_design/twist_orbit_tf_del_AO_long.csv")
+
+df_sRNA <- read_csv("../../twist_oligo_design/twist_orbit_small_RNA.csv")
+
+df_twist <- bind_rows(df_ao_short %>% mutate(lib = 1) %>%
+                      mutate(left_oligo_pos = left_avd_ovlp, right_oligo_pos = right_avd_ovlp),
+                    df_ao_long %>% mutate(lib = 2)%>%
+                      mutate(left_oligo_pos = left_avd_ovlp, right_oligo_pos = right_avd_ovlp),
+                    df_sRNA %>% mutate(lib = 3) %>% mutate(gene=`Gene Name`))
+
+df_twist %>% select(lib, gene, oligo)
+
+```
+Now, for each library we can match reads to our designed oligos and count how many times they occur. We will do this with the function `vcountPDict()` from the biostrings package. We will only consider perfect matches, but this code can be easily adapted for mismatches and indels and it did not change the results.
+
+## Lib 1
+
+
+
+```{r}
+
+lib_1_TOs <- DNAStringSet((df_twist %>% filter(lib==1))$oligo)
+
+pdict <- PDict(lib_1_TOs)
+
+lib_1_counts <- vcountPDict(pdict, df_fasta_1,collapse = 1)
+
+lib_1_counts_genes <- bind_cols(df_twist %>% filter(lib==1), 'TO_reads'=lib_1_counts)
+
+#sum(lib_1_counts)
+
+sum(lib_1_counts) / length(df_fasta_1) # 90% of reads perfectly match TOs. 
+
+ggplot(lib_1_counts_genes, aes(x = gene, y =TO_reads )) + geom_point() + ylim(0,NA)
+
+ggplot(lib_1_counts_genes, aes(y=TO_reads )) + geom_boxplot() + ylim(0,NA)
+
+```
+
+
+
+## Lib 2
+
+```{r}
+
+lib_2_TOs <- DNAStringSet((df_twist %>% filter(lib==2))$oligo)
+
+pdict <- PDict(lib_2_TOs)
+
+
+lib_2_counts <- vcountPDict(pdict, df_fasta_2,collapse = 1)
+
+lib_2_counts_genes <- bind_cols(df_twist %>% filter(lib==2), 'TO_reads'=lib_2_counts)
+
+#sum(lib_1_counts)
+
+sum(lib_2_counts) / length(df_fasta_2) # 90% of reads perfectly match TOs. 
+
+ggplot(lib_2_counts_genes, aes(x = gene, y =TO_reads )) + geom_point() + ylim(0,NA)
+
+ggplot(lib_2_counts_genes, aes(y=TO_reads )) + geom_boxplot() + ylim(0,NA)
+
+```
+
+
+## Lib 3
+
+```{r}
+
+lib_3_TOs <- DNAStringSet((df_twist %>% filter(lib==3))$oligo)
+
+pdict <- PDict(lib_3_TOs)
+
+
+lib_3_counts <- vcountPDict(pdict, df_fasta_3,collapse = 1)
+
+lib_3_counts_genes <- bind_cols(df_twist %>% filter(lib==3), 'TO_reads'=lib_3_counts)
+
+#sum(lib_1_counts)
+
+sum(lib_3_counts) / length(df_fasta_3) # 90% of reads perfectly match TOs. 
+
+ggplot(lib_3_counts_genes, aes(x = gene, y =TO_reads )) + geom_point() + ylim(0,NA)
+
+ggplot(lib_3_counts_genes, aes(y=TO_reads )) + geom_boxplot() + ylim(0,NA)
+
+```
+
+*note for Library #3 ncRNA 2-5 are extremely similar. In fact ncRNA2 and ncRNA5 are identical. ncRNA3 and ncRNA 4 only differ from 2/5 and each other by 1 nt.
+
+**Conclusion:** For each library, approximately 90% of the reads match perfectly to a designed TO construct. The percentage increases slightly to ~95% when mismatches and indels are included, but using perfect matches seems like a reasonable set to proceed with.
+
+
+# Combined TO abundance dataset
+
+Finally, let's save these perfect match counts as a csv for use in Fig. 8 and supplementary figures.
+
+```{r}
+df_TO_abundances <- bind_rows(lib_1_counts_genes,lib_2_counts_genes,lib_3_counts_genes)
+
+write_csv(df_TO_abundances, "df_TO_abundances.csv")
+
+
+```
+
+-----
+
+
+```{r}
+
+sessionInfo()
+
+```

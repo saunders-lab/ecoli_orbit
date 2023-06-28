@@ -1,0 +1,536 @@
+---
+title: "Figure S12 & S13: TO twist library correlations"
+subtitle: 'E. coli ORBIT 2022'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+# Notes
+
+This notebook includes code to generate figures S12 and S13. The purpose of this notebook is to examine what factors might explain the differences in mutant abundance (read counts) within the ORBIT libraries.
+
+The read counts for each gene target comes from the combined analysis fo junctions 1 and 2 in this code notebook: `code/seq_data_processing/upstream_downstream_combined_analysis.Rmd`
+
+------------------------------------------------------------------------
+
+Setup packages and plotting for the notebook:
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+# Check packages
+source("../tools/package_setup.R")
+# Load packages
+library(tidyverse)
+library(cowplot)
+library(patchwork)
+library(kableExtra)
+library(ggrastr)
+library(ggdist)
+library(ggridges)
+library(modelr)
+library(XNAString)
+library(Biostrings)
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+# Load plotting tools
+source("../tools/plotting_tools.R")
+#Modify the plot theme
+theme_set(theme_notebook())
+```
+
+```{r}
+#df_vars <- read_csv("../../data/high_throughput_experiments/to_lib_left_right_counts_TOabun_energy_vars.csv")
+
+#df_vars
+```
+
+# Upstream vs downstream junctions
+
+First, we will start by reading in the junction 1 and junction 2 read count data from the combined analysis.
+
+```{r}
+
+df_TOs_found_up_down <- read_csv("../seq_data_processing/df_TOs_found_up_down.csv") %>% mutate(n_down = ifelse(is.na(n_down), 0, n_down), n_up = ifelse(is.na(n_up), 0, n_up))
+
+df_TOs_found_up_down %>% select(lib, gene, n_down, n_up, found_score)
+
+```
+
+Let's start by looking at the distribution of read counts for targets within each library.
+
+```{r}
+plot_n_up <- ggplot(df_TOs_found_up_down, aes(x = factor(lib), y = n_up, shape = factor(lib))) + 
+  geom_boxplot() + 
+  geom_jitter( width = 0.2, height =0, alpha = 0.1)+ 
+  scale_y_log10(limits = c(NA, 16500)) + 
+  scale_x_discrete(labels = c('oPool', 'short TFs','long TFs','small RNAs'))+
+  scale_shape_manual(values = c(4, 21, 22, 24))+
+  labs(x = "Library", y = 'Perfect reads per target', title = 'Upstream junction')+
+  guides(shape = 'none')
+
+#plot_n_up
+
+plot_n_down <- ggplot(df_TOs_found_up_down, aes(x = factor(lib), y = n_down, shape = factor(lib))) + 
+  geom_boxplot() + 
+  geom_jitter(width = 0.2, height =0, alpha = 0.1) + 
+  scale_y_log10(limits = c(NA, 16500))+
+  scale_x_discrete(labels = c('oPool', 'short TFs','long TFs','small RNAs')) +
+  scale_shape_manual(values = c(4, 21, 22, 24))+
+  labs(x = "Library", y = 'Perfect reads per target', title = 'Downstream junction') + 
+  guides(shape = 'none')
+
+#plot_n_down
+
+plot_n_down | plot_n_up
+
+```
+
+We can see that the putative abundance varies greatly from \~1 read to 10,000 in several cases. What explains these differences in read abundance (and possibly ORBIT efficiency).
+
+Let's look at the most obvious correlation that we expect to find. Junction 1 and Junction 2 read abundances should correlate, assuming that they are each present in the same mutant cells. To compare fairly accross libraries we will normalize the read counts to the total counts from the library.
+
+```{r}
+df_counts_norm <- df_TOs_found_up_down %>% 
+  group_by(lib) %>% 
+  mutate(down_total = sum(n_down, na.rm = T), up_total = sum(n_up,na.rm = T)) %>% 
+  mutate(down_norm = n_down / down_total, up_norm = n_up / up_total)
+
+df_counts_norm %>% select(lib, gene, n_down, n_up, found_score, down_norm, up_norm)
+```
+
+Now we can fit a linear model to the log transformed normalized data and assess graphically and statistically.
+
+```{r}
+#Fit linear model on log transformed data, excluding zero counts.
+summary(lm(up_norm ~ down_norm, data = df_counts_norm %>% filter(down_norm>0 & up_norm >0) %>% mutate(left_norm = log(down_norm, 10), right_norm = log(up_norm, 10))))
+
+plot_up_down_cor <- ggplot(df_counts_norm, aes(x = down_norm, y = up_norm, shape = factor(lib), group = 'all')) + 
+  geom_smooth(method = 'lm', se = F, alpha = 0.75)+
+  #geom_abline(slope = 0.8478, intercept = 0.564, color = 'red')+
+  geom_point(color = 'black', alpha = 0.25) + 
+  scale_x_log10() + scale_y_log10() + 
+  scale_shape_manual(values = c(4, 21, 22, 24), labels = c('oPool', 'short TFs','long TFs','small RNAs'))+
+  labs(x = 'Downstream junction\nNormalized perfect reads per target', y = 'Upstream junction\nNormalized perfect reads per target', shape = "Library", caption = 'Adj R2 = 0.71, p = 2.2e-16')
+
+
+plot_up_down_cor
+```
+
+Indeed Junction 1 and 2 read counts correlate quite well. Here is the combined figure that shows up in Fig. S12.
+
+```{r}
+plot_grid(plot_n_down, plot_n_up, plot_up_down_cor + guides(shape ='none'), ncol = 3, align = 'hv', axis = 'lr')
+```
+
+# Prepare oligo variables
+
+With that first quality control question out of the way, now we will examine other oligo parameters and how well they correlate with putative mutant abundance. First we need to calculate and prepare all the variables we need.
+
+## TO abundances
+
+First we will add the TO abundance data (twist libraries only) to our `df_counts_norm` dataset. Let's read in the TO abundance data from `code/seq_data_processing/TO_abundance`
+
+```{r}
+df_abundance <- read_csv("../seq_data_processing/TO_abundance/df_TO_abundances.csv")
+
+df_abundance %>% select(lib, gene, TO_reads)
+```
+
+Let's normalize the TO counts to each library total and add this to the df_counts_norm dataframe. 
+
+```{r}
+df_abundance_norm <- df_abundance %>% 
+  select(gene, lib, to_abun = TO_reads) %>% #**focus on perfect matches, rename to to_abun
+  group_by(lib) %>% 
+  mutate(lib_total = sum(to_abun, na.rm = T)) %>% 
+  mutate(to_abun_norm = to_abun / lib_total)
+
+df_counts_norm_TO <- left_join(df_counts_norm,df_abundance_norm, 
+                               by = c('gene','lib'))
+
+df_counts_norm_TO %>% select(gene, lib, to_abun, to_abun_norm)
+```
+
+
+## Oligo free energy
+
+The major variable we need to calculate are the free energies for the targeting oligos. The following code cell iterates through each targeting oligo and uses the XNAstring package to calculate the oligo monomer free energy, oligo homodimer free energy and the free energy of each homology arm duplex (complexed with homology on genome).
+
+```{r eval = F}
+
+#takes a min or two to run
+
+df_oligo_energy <- tibble()
+
+for(row in 1:nrow(df_TOs_found_up_down)){
+  
+  oligo <- df_TOs_found_up_down$oligo[row]
+  
+  #print(row)
+  
+  oligo_len <- nchar(oligo)
+  
+  arm_len <- (oligo_len-38)/2
+  
+  arm_1 <- str_sub(oligo, start = 1, end = arm_len)
+  
+  arm_2 <- str_sub(oligo, oligo_len - arm_len + 1, oligo_len)
+  
+  oligo_xna <- XNAString(base = toupper(oligo))
+  
+  oligo_homodimer_xna <- XNAString(base = c(toupper(oligo),toupper(oligo)))
+  
+  arm_1_xna <- XNAString(base = c(arm_1, as.character(reverseComplement(DNAString(arm_1)))))
+  
+  arm_2_xna <- XNAString(base = c(arm_2, as.character(reverseComplement(DNAString(arm_2)))))
+  
+  oligo_monomer <- predictMfeStructure(oligo_xna)
+  
+  oligo_homodimer <- predictDuplexStructure(oligo_homodimer_xna)
+  
+  arm_1_duplex <- predictDuplexStructure(arm_1_xna)
+  
+  arm_2_duplex <- predictDuplexStructure(arm_2_xna)
+  
+  oligo_energy <- bind_cols(df_TOs_found_up_down[row,],
+                            tibble('oligo_monomer' = oligo_monomer$mfe, 
+                                   'oligo_homodimer'=oligo_homodimer$mfe, 
+                                   'arm_1_duplex'=arm_1_duplex$mfe,
+                                   'arm_2_duplex'=arm_2_duplex$mfe))
+  
+  df_oligo_energy <- bind_rows(df_oligo_energy, oligo_energy)
+  
+  
+}
+
+#write_csv(df_oligo_energy, "df_oligo_energy.csv")
+
+#df_oligo_energy
+
+```
+
+We can read in df_oligo energy here without running the above cell.
+
+```{r}
+
+df_oligo_energy <- read_csv("df_oligo_energy.csv")
+
+df_oligo_energy %>% select(lib, gene, oligo_monomer, oligo_homodimer, arm_1_duplex, arm_2_duplex)
+
+```
+
+## Other
+
+Once we have calculated these values, we need to do some slight rearranging, by adding the homology arm duplex free energies together to get a combined homology free energy. We will also calculate the distance from the target to the origin of replication.
+
+```{r}
+
+#genomic positions for origin, terminus and genome length.
+ori <- 3923882.5
+ter <- 1590250
+gen_len <- 4641652
+
+df_vars <- left_join(df_counts_norm_TO, df_oligo_energy %>% select(lib, gene, oligo_monomer, oligo_homodimer, arm_1_duplex, arm_2_duplex), by =c('gene', 'lib')) %>%
+  mutate(arm_total_duplex = arm_1_duplex + arm_2_duplex) %>% # get total homology arm free energy
+  mutate(ori_dist = ifelse(left_oligo_pos > ter, abs(ori-left_oligo_pos), gen_len-ori+left_oligo_pos)) %>%  #Calculate distance to origin from vals above
+  mutate(del_len = right_oligo_pos - left_oligo_pos) %>%  #calculate deletion length
+  mutate(lib = factor(lib,levels = c("0","1","2","3"),labels = c('oPool','short TFs','long TFs','small RNAs'))) #organize lib names and levels
+
+#write_csv(df_vars, "df_vars.csv")
+
+df_vars %>% select(lib, gene, arm_total_duplex, ori_dist, to_abun, del_len)
+
+
+```
+
+# Model Oligo parameters vs. mutant abundance
+
+Now that we have prepared all of the oligo variables, we can fit linear models to see how well each variable correlates with the observed mutant library reads.
+
+## Deletion length
+
+```{r}
+del_len_mod <- function(df) {
+  lm(up_log~del_len_log , data = df)
+}
+
+df_del_len <- df_vars %>% 
+  filter(n_up>0) %>% 
+  mutate(up_log = log(n_up,10), del_len_log = log(del_len, 10)) %>% 
+  group_by(lib) %>% 
+  nest() %>% 
+  mutate(model = map(data, del_len_mod)) %>% 
+  mutate(glance = map(model, broom::glance))%>% 
+  mutate(summary = map(model, broom::tidy, conf.int = T))
+
+df_vars %>% group_by(lib) %>% summarise(min_del_len = min(del_len), max_del_len = max(del_len))
+
+df_del_len %>% unnest(glance)
+
+df_del_len %>% unnest(summary)
+
+del_len_labs <- df_del_len %>% unnest(glance) %>% 
+  mutate(label_1 = paste0("adj R2 = ", round(adj.r.squared, digits = 3))) %>% 
+  mutate(label_2 = paste0("p = ", signif(p.value, digits = 2))) %>% 
+  mutate(labels = paste0(lib,": ",label_1," ",label_2))
+
+plot_del_len <- ggplot(df_vars, aes(x = del_len, y = n_up)) +
+  geom_smooth(method = 'lm')+ 
+  geom_point(shape = 21, alpha = 0.25) +
+  #geom_text(data = del_len_labs, aes())
+  scale_x_log10() + scale_y_log10()+facet_wrap(~lib, ncol = 2, scales = 'free') + 
+  labs(x = "Deletion length (bp)", y = 'Reads per target (upstream junction)', caption = paste(del_len_labs$labels, collapse = "\n"), title = 'Deletion length')
+
+plot_del_len
+```
+
+## Targeting oligo abundance
+
+```{r}
+to_abun_mod <- function(df) {
+  lm(up_log~to_abun , data = df)
+}
+
+df_to_abun <- df_vars %>% 
+  filter(n_up>0) %>% 
+  filter(lib != "oPool") %>% 
+  mutate(up_log = log(n_up,10)) %>% 
+ # mutate(lib = factor(lib,labels = c('short TFs','long TFs','small RNAs'))) %>% 
+  group_by(lib) %>% 
+  nest() %>% 
+  mutate(model = map(data, to_abun_mod)) %>% 
+  mutate(glance = map(model, broom::glance))%>% 
+  mutate(summary = map(model, broom::tidy, conf.int = T))
+
+df_to_abun %>% unnest(glance)
+
+df_to_abun %>% unnest(summary)
+
+to_abun_labs <- df_to_abun %>% unnest(glance) %>% 
+  mutate(label_1 = paste0("adj R2 = ", round(adj.r.squared, digits = 3))) %>% 
+  mutate(label_2 = paste0("p = ", signif(p.value, digits = 2))) %>% 
+  mutate(labels = paste0(lib,": ",label_1," ",label_2))
+
+plot_to_abun <- ggplot(df_vars, aes(x = to_abun, y = n_up)) +
+  geom_smooth(method = 'lm')+ 
+  geom_point(shape = 21, alpha = 0.25) +
+  scale_y_log10()+facet_wrap(~lib, ncol = 2, scales = 'free') + 
+  labs(x = "Oligo abundance (reads)", y = 'Reads per target (upstream junction)', caption = paste(to_abun_labs$labels, collapse = "\n"), title = 'Oligo abundance')
+
+plot_to_abun
+```
+
+## Homology arm duplex free energy
+
+```{r}
+hom_energy_mod <- function(df) {
+  lm(up_log~arm_total_duplex, data = df)
+}
+
+df_hom_energy <- df_vars %>% 
+  filter(n_up >0) %>% 
+  mutate(up_log = log(n_up,10)) %>% 
+  #mutate(lib = factor(lib,labels = c('oPool','short TFs','long TFs','small RNAs'))) %>% 
+  group_by(lib) %>% 
+  nest() %>% 
+  mutate(model = map(data, hom_energy_mod)) %>% 
+  mutate(glance = map(model, broom::glance))%>% 
+  mutate(summary = map(model, broom::tidy, conf.int = T))
+
+df_hom_energy %>% unnest(glance)
+
+df_hom_energy %>% unnest(summary)
+
+hom_energy_labs <- df_hom_energy %>% unnest(glance) %>% 
+  mutate(label_1 = paste0("adj R2 = ", round(adj.r.squared, digits = 3))) %>% 
+  mutate(label_2 = paste0("p = ", signif(p.value, digits = 2))) %>% 
+  mutate(labels = paste0(lib,": ",label_1," ",label_2))
+
+plot_hom_energy <- ggplot(df_vars, aes(x = arm_total_duplex, y = n_up)) +
+  geom_smooth(method = 'lm')+ 
+  geom_point(shape = 21, alpha = 0.25) +
+  scale_y_log10()+facet_wrap(~lib, ncol = 2, scales = 'free') + 
+  labs(x = "Homology arm free energy (kcal/mol)", y = 'Reads per target (upstream junction)', caption = paste(hom_energy_labs$labels, collapse = "\n"), title = 'Oligo homology arm duplex free energy')
+
+plot_hom_energy
+```
+
+## Monomer oligo folding free energy
+
+```{r}
+mon_energy_mod <- function(df) {
+  lm(up_log~oligo_monomer, data = df)
+}
+
+df_mon_energy <- df_vars %>% 
+  filter(n_up >0) %>% 
+  mutate(up_log = log(n_up,10)) %>% 
+  #mutate(lib = factor(lib,labels = c('oPool','short TFs','long TFs','small RNAs'))) %>% 
+  group_by(lib) %>% 
+  nest() %>% 
+  mutate(model = map(data, mon_energy_mod)) %>% 
+  mutate(glance = map(model, broom::glance))%>% 
+  mutate(summary = map(model, broom::tidy, conf.int = T))
+
+df_mon_energy %>% unnest(glance)
+
+df_mon_energy %>% unnest(summary)
+
+mon_energy_labs <- df_mon_energy %>% unnest(glance) %>% 
+  mutate(label_1 = paste0("adj R2 = ", round(adj.r.squared, digits = 3))) %>% 
+  mutate(label_2 = paste0("p = ", signif(p.value, digits = 2))) %>% 
+  mutate(labels = paste0(lib,": ",label_1," ",label_2))
+
+plot_mon_energy <- ggplot(df_vars, aes(x = oligo_monomer, y = n_up)) +
+  geom_smooth(method = 'lm')+ 
+  geom_point(shape = 21, alpha = 0.25) +
+  scale_y_log10()+facet_wrap(~lib, ncol = 2, scales = 'free') + 
+  labs(x = "Oligo monomer free energy (kcal/mol)", y = 'Reads per target (upstream junction)', caption = paste(mon_energy_labs$labels, collapse = "\n"), title = 'Oligo monomer free energy')
+
+plot_mon_energy
+```
+
+## Distance to origin of replication
+
+```{r}
+ori_dist_mod <- function(df) {
+  lm(up_log~ori_dist, data = df)
+}
+
+df_ori_dist <- df_vars %>% 
+  filter(n_up >0) %>% 
+  mutate(up_log = log(n_up,10)) %>% 
+  #mutate(lib = factor(lib,labels = c('oPool','short TFs','long TFs','small RNAs'))) %>% 
+  group_by(lib) %>% 
+  nest() %>% 
+  mutate(model = map(data, ori_dist_mod)) %>% 
+  mutate(glance = map(model, broom::glance))%>% 
+  mutate(summary = map(model, broom::tidy, conf.int = T))
+
+df_ori_dist %>% unnest(glance)
+
+df_ori_dist %>% unnest(summary)
+
+ori_dist_labs <- df_ori_dist %>% unnest(glance) %>% 
+  mutate(label_1 = paste0("adj R2 = ", round(adj.r.squared, digits = 3))) %>% 
+  mutate(label_2 = paste0("p = ", signif(p.value, digits = 2))) %>% 
+  mutate(labels = paste0(lib,": ",label_1," ",label_2))
+
+ Mb_label <- function(x){
+ # from s to ns
+ lab <- paste(x / 1000000)
+ }
+
+plot_ori_dist <- ggplot(df_vars, aes(x = ori_dist, y = n_up)) +
+  geom_smooth(se = F, color = 'red')+
+  geom_smooth(method = 'lm')+ 
+  geom_point(shape = 21, alpha = 0.25) +
+  scale_x_continuous(labels = Mb_label)+
+  scale_y_log10()+facet_wrap(~lib, ncol = 2, scales = 'free') + 
+  labs(x = "Distance to ori (Mb)", y = 'Reads per target (upstream junction)', caption = paste(ori_dist_labs$labels, collapse = "\n"), title = 'Distance to ori')
+
+plot_ori_dist
+```
+
+# Assemble single variable plots
+
+```{r}
+theme_set(theme_figure())
+
+single_vars <- plot_grid(plot_del_len, plot_to_abun, plot_hom_energy, plot_mon_energy, plot_ori_dist, ncol = 2, align = 'hv', axis = 'tblr')
+
+single_vars
+
+#save_plot("../../figures/r_pdf_figs/supp_figs/mut_lib_correlations.pdf",single_vars, base_height = 10, base_width = 8)
+
+```
+
+# 3 variable model
+
+```{r}
+theme_set(theme_notebook())
+
+mod_3_var <- function(df) {
+  #lm(right_norm_log~arm_total_duplex+ ori_dist + to_abun_norm , data = df)
+  lm(up_log~arm_total_duplex+ ori_dist + to_abun_norm , data = df)
+}
+
+
+df_mod_3_var <- df_vars %>% 
+  filter(lib != 'oPool') %>% 
+  filter(n_up>0) %>% 
+  mutate(up_norm_log = log(up_norm, 10), up_log = log(n_up,10)) %>% 
+  #mutate(lib = factor(lib,labels = c('short TFs','long TFs','small RNAs'))) %>% 
+  group_by(lib) %>% 
+  nest() %>% 
+  mutate(model = map(data, mod_3_var)) %>% 
+  mutate(resids = map2(data, model, add_residuals)) %>% 
+  mutate(preds = map2(data, model, add_predictions)) %>% 
+  mutate(glance = map(model, broom::glance))%>% 
+  mutate(summary = map(model, broom::tidy, conf.int = T))
+
+df_mod_3_var %>% unnest(glance)
+
+df_mod_3_var %>% unnest(summary)
+
+mod_3_var_labs <- df_mod_3_var %>% unnest(glance) %>% 
+  mutate(label_1 = paste0("adj R2 = ", round(adj.r.squared, digits = 3))) %>% 
+  mutate(label_2 = paste0("p = ", signif(p.value, digits = 2))) %>% 
+  mutate(labels = paste0(lib,": ",label_1," ",label_2))
+
+plot_3_var_preds <- ggplot(data=df_mod_3_var  %>% unnest( preds), aes(x = pred , y = up_log )) + 
+  geom_abline(slope = 1, intercept = 0,linetype = 2, color = 'light gray')+
+  geom_point(shape = 21, alpha = 0.25) + 
+  facet_wrap(~lib, ncol = 3, scales = 'free')+
+  #geom_text(data = model_labs %>% filter(lib=='long TFs'), aes(x =1.25, y = 2.5, label = labels))+
+  scale_x_continuous(limits = c(1,3),breaks = c(1,2,3), labels = c( "10", "100","1000"))+
+  scale_y_continuous(limits = c(0,4),breaks = c(1,2,3), labels = c( "10", "100","1000"))+
+  labs(y = "Experimental reads per target",x = 'Predicted reads per target', subtitle = 'Reads per target ~ oligo abundance + homology arm free energy + distance to ori', title = '3 var model')
+
+plot_3_var_preds
+
+
+plot_3_var_resids <- ggplot(data=df_mod_3_var  %>% unnest(preds, resids), aes(x = pred , y = resid )) + 
+  geom_hline(yintercept = 0, linetype = 2, color = 'light gray')+
+  geom_smooth()+
+  geom_point(shape = 21, alpha = 0.25) + 
+  facet_wrap(~lib, ncol = 3, scales = 'free')+
+  scale_x_continuous(limits = c(1,3),breaks = c(1,2,3), labels = c( "10", "100","1000"))+
+  scale_y_continuous(breaks = c(-2,-1,0,1), labels = c('-100x','-10x','0','+10x')) +
+  labs(y = "Residual error",x = 'Predicted reads per target', caption = paste(mod_3_var_labs$labels, collapse = "\n"))
+
+plot_3_var_resids
+  
+  
+plot_3_var_preds / plot_3_var_resids
+
+
+```
+
+# Assemble full figures
+
+```{r}
+theme_set(theme_figure())
+
+top_grid <- plot_grid(plot_n_down, plot_n_up, plot_up_down_cor + guides(shape ='none'), ncol = 3, align = 'hv', axis = 'tblr')
+
+#middle_grid <- plot_grid(plot_del_len, plot_to_abun, plot_hom_energy, plot_mon_energy, plot_ori_dist, ncol = 3, align = 'hv', axis = 'tblr')
+
+bottom_grid <- plot_grid(plot_3_var_preds, plot_3_var_resids,ncol = 1, align = 'hv', axis = 'lr')
+
+full_grid <- plot_grid(top_grid, bottom_grid, ncol = 1, align = 'hv', axis = 'lr', rel_heights = c(1,2))
+
+full_grid
+
+#save_plot("../../figures/r_pdf_figs/supp_figs/mut_lib_up_down_mod.pdf",full_grid, base_height = 8, base_width = 8)
+
+
+```
+
+```{r}
+sessionInfo()
+```

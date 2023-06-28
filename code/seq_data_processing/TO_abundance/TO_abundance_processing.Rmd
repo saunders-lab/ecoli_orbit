@@ -1,0 +1,42 @@
+---
+title: "TO abundance - raw data processing notebook"
+subtitle: 'E. coli ORBIT 2023'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+This notebook does fastp quality filtering on raw data for the TO abundance raw sequencing data.
+
+```{bash}
+source ~/.bash_profile
+
+conda activate intel_env
+
+fastp -i "../../../data/seq_data/twist_TO_abundance/raw_data/twist-lib-1_S1_L001_R1_001.fastq.gz" -I "../../../data/seq_data/twist_TO_abundance/raw_data/twist-lib-1_S1_L001_R2_001.fastq.gz" -m --merged_out "../../../data/seq_data/twist_TO_abundance/fastp_processed/twist_lib_1_fastp.fastq.gz" -h "../../../data/seq_data/twist_TO_abundance/fastp_processed/lib_1_report.html"
+
+fastp -i "../../../data/seq_data/twist_TO_abundance/raw_data/twist-lib-2_S2_L001_R1_001.fastq.gz" -I "../../../data/seq_data/twist_TO_abundance/raw_data/twist-lib-2_S2_L001_R2_001.fastq.gz" -m --merged_out "../../../data/seq_data/twist_TO_abundance/fastp_processed/twist_lib_2_fastp.fastq.gz" -h "../../../data/seq_data/twist_TO_abundance/fastp_processed/lib_2_report.html"
+
+fastp -i "../../../data/seq_data/twist_TO_abundance/raw_data/twist-lib-3_S3_L001_R1_001.fastq.gz" -I "../../../data/seq_data/twist_TO_abundance/raw_data/twist-lib-3_S3_L001_R2_001.fastq.gz" -m --merged_out "../../../data/seq_data/twist_TO_abundance/fastp_processed/twist_lib_3_fastp.fastq.gz" -h "../../../data/seq_data/twist_TO_abundance/fastp_processed/lib_3_report.html"
+
+```
+
+```{bash}
+source ~/.bash_profile
+
+conda activate intel_env
+
+gzip -d "../../../data/seq_data/twist_TO_abundance/fastp_processed/twist_lib_1_fastp.fastq.gz" 
+gzip -d "../../../data/seq_data/twist_TO_abundance/fastp_processed/twist_lib_2_fastp.fastq.gz" 
+gzip -d "../../../data/seq_data/twist_TO_abundance/fastp_processed/twist_lib_3_fastp.fastq.gz" 
+
+fastq_to_fasta -i "../../../data/seq_data/twist_TO_abundance/fastp_processed/twist_lib_1_fastp.fastq" -o "../../../data/seq_data/twist_TO_abundance/fastp_processed/lib_1_TOs.fasta"
+fastq_to_fasta -i "../../../data/seq_data/twist_TO_abundance/fastp_processed/twist_lib_2_fastp.fastq" -o "../../../data/seq_data/twist_TO_abundance/fastp_processed/lib_2_TOs.fasta"
+fastq_to_fasta -i "../../../data/seq_data/twist_TO_abundance/fastp_processed/twist_lib_3_fastp.fastq" -o "../../../data/seq_data/twist_TO_abundance/fastp_processed/lib_3_TOs.fasta"
+
+```
+

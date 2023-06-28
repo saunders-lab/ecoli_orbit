@@ -1,0 +1,751 @@
+---
+title: 'ORBIT'
+output: 
+  flexdashboard::flex_dashboard:
+    theme: bootstrap
+fontsize: 12pt
+runtime: shiny
+---
+
+```{r echo=F, warning = F, message = F}
+library(tidyverse)
+#library(gggenes)
+library(ggrepel)
+library(ggiraph)
+
+library(BiocManager)
+
+
+library(Biostrings)
+library(bioseq)
+library(shinyWidgets)
+
+source('TO_tools.R')
+
+theme_set(theme_bw())
+
+```
+
+```{r}
+df_genes <- read_delim("All_instances_of_Genes_in_Escherichia_coli_K-12_substr._MG1655.txt") %>% 
+  mutate(left_pos = `Left-End-Position`, right_pos = `Right-End-Position`) %>% 
+  select(-`Left-End-Position`, -`Right-End-Position`) %>% 
+  mutate(fwd = ifelse(Direction=='+', T, F)) %>% 
+  mutate(center_pos = (left_pos + right_pos)/2) %>% 
+  mutate(long_tooltip = paste0('<center>',Genes,'</center>',
+                          '\n left: ', left_pos, ' | right: ', right_pos, ' | direction: ', Direction,
+                          '\n product: ', Product))
+
+
+```
+
+# Target oligo design
+
+##  {.sidebar data-width="200%"}
+
+### 
+
+```{r}
+
+selectizeInput('genelist',"Jump to a gene", choices = df_genes$Genes, selected = 'galK')
+
+sliderInput('hom_len',"Homology arm length", min = 0, max = 250, value = 82, step = 2)
+
+selectInput('att_dir', "attB direction", choices = c("+","-"))
+
+selectInput('TO_type',"Type of TO", choices = c('deletion','N-terminal','C-terminal', 'insertion'), selected = 'deletion')
+
+```
+
+Auto update plot
+
+```{r}
+
+column(materialSwitch(inputId = "auto_update", label = NULL, value = T), width =1)
+
+#column(materialSwitch(inputId = "show_surround", label = NULL, value = T), width =1)
+
+sliderInput('surround_len',"Flanking sequence length", min = 0, max = 1000, value = 0, step = 10)
+
+```
+
+Copy TO params to link
+
+```{r}
+renderUI({
+  url <- 'https://saunders-lab.shinyapps.io/TO_design_beta'
+  actionButton('share_TO', 'Share', onclick=paste0('navigator.clipboard.writeText("',
+                                                   url,
+                                                   '?g_left_pos=',input$g_left_pos,
+                                                   '&g_right_pos=',input$g_right_pos,
+                                                   '&TO_left_pos=',input$TO_left_pos,
+                                                   '&TO_right_pos=',input$TO_right_pos,
+                                                   '&att_dir=',input$att_dir,
+                                                   '&TO_type=',input$TO_type,
+                                                   '&hom_len=',input$hom_len,
+                                                   '&surround_len=',input$surround_len,
+                                                   #'&auto_update=',input$auto_update,
+                                                   '&genelist=NULL', '")'))
+#})
+})
+
+
+```
+
+
+
+## main
+
+### 
+
+```{r}
+df_poly <- df_genes %>% 
+  #filter(right_pos<20000) %>% 
+  pivot_longer(c(left_pos, right_pos), values_to = 'x_pos', names_to = 'left_right') %>% 
+  mutate( y_pos_bottom = 0.95,y_pos_top = 1.05, y_pos_center=1) %>% 
+  pivot_longer(c(y_pos_bottom,y_pos_top, y_pos_center), values_to = 'y_pos', names_to = 'top_bottom') %>% 
+  mutate(x_pos = ifelse(left_right == 'left_pos' & Direction == '-' & top_bottom !='y_pos_center', x_pos + 50, x_pos)) %>% 
+  mutate(x_pos = ifelse(left_right == 'right_pos' & Direction == '+' & top_bottom !='y_pos_center', x_pos - 50, x_pos)) %>% 
+  mutate(point_num = case_when(left_right == 'left_pos' & top_bottom == 'y_pos_bottom' ~ 1,
+                               left_right == 'left_pos' & top_bottom == 'y_pos_center' ~ 2,
+                               left_right == 'left_pos' & top_bottom == 'y_pos_top' ~ 3,
+                               left_right == 'right_pos' & top_bottom == 'y_pos_top' ~ 4,
+                               left_right == 'right_pos' & top_bottom == 'y_pos_center' ~ 5,
+                               left_right == 'right_pos' & top_bottom == 'y_pos_bottom' ~ 6)) %>% 
+  arrange(Genes, point_num)
+
+  kb_label <- function(x){
+  # from s to ns
+  lab <-  paste(x / 1000)
+  }
+```
+
+```{r}
+
+genome_plot <- reactiveValues(plot = NULL)
+
+
+long_update <- reactiveValues(update = F)
+warning <- reactiveValues(long = NULL)
+manual <- reactiveValues(update = F)
+
+toListen <- reactive({
+  
+  if(is.null(input$auto_update)){
+    
+    auto_update <- FALSE
+    
+  }else{
+    
+    if((input$g_right_pos-input$g_left_pos)>100000){
+
+      auto_update <- FALSE
+
+
+    }else{
+      
+      auto_update <-input$auto_update
+      
+    }
+    
+  } 
+  
+  if(auto_update){
+    
+    print('auto mode')
+    
+    list(input$g_left_pos,input$g_right_pos, input$TO_left_pos,input$TO_right_pos)
+    #input$g_update
+    
+  }else{
+    print('manual mode')
+    print(input$g_update)
+    input$g_update
+
+    }
+  
+  })
+
+observeEvent(input$g_update,{
+  
+  long_update$update <- ifelse((input$g_right_pos - input$g_left_pos)>100000 & (input$g_right_pos - input$g_left_pos)<500000, T, F)
+  
+}, priority = 1)
+
+observeEvent(input$g_update,{
+  
+  manual$update <- T
+  
+}, priority = 1)
+
+observeEvent( toListen(),{
+  
+  print("GO!")
+  
+  if(input$auto_update == F){
+    print("hold for g_update")
+    req(manual$update)
+  }
+  
+  manual$update <- F
+
+  
+  #On startup initialize with galK coordiantes
+  if(is.null(input$g_left_pos) & is.null(input$g_right_pos) & is.null(input$TO_left_pos) & is.null(input$TO_right_pos)){
+    
+    print("Startup!")
+    
+    g_left_pos <- 788831
+    g_right_pos <- 789979
+    TO_left_pos <- 788831
+    TO_right_pos <- 789979
+    
+   
+    
+  }else{
+  
+  g_left_pos <- input$g_left_pos
+  g_right_pos <- input$g_right_pos
+  TO_left_pos <- input$TO_left_pos
+  TO_right_pos <- input$TO_right_pos
+  
+  }
+  
+  req(g_left_pos, g_right_pos, TO_left_pos, TO_right_pos)
+  # check if broswer window boundaries are within genome. If not reset to galK
+  if(g_left_pos < 1 | g_left_pos >  4641652 |  g_right_pos <1 | g_right_pos  > 4641652){
+      
+      g_left_pos <- 7888316
+      g_right_pos <- 789979
+      
+  updateNumericInput(session,"g_left_pos", value = 788831)
+  updateNumericInput(session,"g_right_pos", value = 789979)
+  
+  }
+  
+  # check if left position is less than right position. If not, then switch inputs
+  if(g_left_pos > g_right_pos ){
+      
+    temp_left <- g_left_pos
+    g_left_pos <- g_right_pos
+    g_right_pos <- temp_left
+  #updateNumericInput(session,"g_left_pos", value = g_right_pos)
+  #updateNumericInput(session,"g_right_pos", value = g_left_pos)
+    
+  }
+  print("long_update")
+  print(long_update$update)
+  
+  if((g_right_pos - g_left_pos) >500000){
+    warning$long <- "**Warning: Plot will not update for regions >500kb. Change parameters.**"
+  }else{
+    warning$long <- NULL
+  }
+  req(((g_right_pos - g_left_pos) <500000))
+  
+  if((g_right_pos - g_left_pos) >100000){
+    warning$long <- "**Warning: Plot will not auto update for regions >100kb. Press 'Update Plot!'**"
+  }else{
+    warning$long <- NULL
+  }
+  
+  req(((g_right_pos - g_left_pos) <100000) | long_update$update)
+  
+  long_update$update <- F
+  
+
+  
+  
+  # if(input$TO_left_pos<input$g_left_pos){
+  #     updateNumericInput(session,"TO_left_pos", value = input$g_left_pos)
+  # }
+  #   if(input$TO_right_pos>input$g_right_pos){
+  #     updateNumericInput(session,"TO_right_pos", value = input$g_right_pos)
+  # }
+  
+  #left_to <- input$TO_left_pos
+  #right_to <- input$TO_right_pos
+
+  
+  # if(!is.null(input$plot_selected )){
+  #   
+  #   selected_genes <- df_genes %>% filter(Genes %in% input$plot_selected)
+  #   
+  #   to_left <- min(selected_genes$left_pos, na.rm = T)
+  #   
+  #   right_pos <- max(selected_genes$right_pos, na.rm = T)
+  # }
+  
+  #print(head(df_poly$tooltip))
+  
+  plot_poly <- ggplot(df_poly %>% filter(x_pos > g_left_pos-2000 & x_pos < g_right_pos+2000), 
+                      aes(x = x_pos, y = y_pos, label = Genes, group = Genes)) + 
+  geom_hline(yintercept = 1, size = 1)+
+  geom_segment(x = TO_left_pos, xend = TO_left_pos, y = 0.75, yend = 1, size = 0.5, color = 'light gray')+
+  geom_segment(x = TO_right_pos, xend = TO_right_pos, y = 0.75, yend = 1, size = 0.5, color = 'light gray')+
+  geom_label_repel(data = . %>% distinct(Genes, center_pos),aes(x = center_pos, y = 1),
+                   box.padding = 0.5,min.segment.length=0,size = 3, ylim = c(1.05, NA), 
+                   direction = 'y', segment.size = 0.25, segment.linetype = 1, segment.color = 'light gray')+
+  geom_polygon_interactive(aes(tooltip = long_tooltip, data_id = Genes),
+                           fill = 'light gray', color = 'black', rule = 'winding', size = 0.5) + 
+  geom_segment(x = TO_left_pos, xend = TO_right_pos, y = 0.75, yend = 0.75, linetype = 2, color = '#D55E00')+
+  geom_segment(x = TO_left_pos, xend = TO_right_pos, y = 0.75, yend = 0.75, linetype = 2, color = '#D55E00')+
+  geom_segment(x = TO_left_pos, xend = TO_left_pos-41, y = 0.75, yend = 0.75, linetype = 1, color = '#E69F00')+
+  geom_segment(x = TO_right_pos, xend = TO_right_pos + 41, y = 0.75, yend = 0.75, linetype = 1, color = '#56B4E9')+
+  geom_point(x = TO_left_pos, y = 0.75, size = 3, shape = 21, fill = '#E69F00')+
+  geom_point(x = TO_right_pos, y = 0.75, size = 3, shape = 21, fill = '#56B4E9')+
+  labs(x = 'Genomic position (kb)', y = NULL) + 
+  scale_x_continuous(labels = kb_label) + ylim(0.5,1.5) + coord_cartesian(xlim = c(g_left_pos-500, g_right_pos + 500)) + 
+    theme(axis.text.y = element_blank(), panel.grid = element_blank(), axis.ticks.y = element_blank())
+
+#plot_poly
+tooltip_css <- "background-color:White;padding:10px;border-style:solid;border-color:black;border-width:1px;color:black;"
+
+genome_plot$plot <- girafe(ggobj = plot_poly, width_svg = 12, height_svg = 4,
+       options = list(
+         #opts_sizing(rescale= F),
+         opts_tooltip(css = tooltip_css, opacity = 1, offx = 0, offy = 15),
+         opts_hover(css = "fill:gray;"), 
+         opts_selection( css = "fill:#D55E00;stroke-width:1.5",type = "multiple", only_shiny = FALSE)),
+       fonts = list(sans = 'sans serif')
+       )
+
+  
+}, ignoreNULL = F, ignoreInit = T)
+
+#ggiraph::girafeOutput("plot")
+output$plot <- renderGirafe({genome_plot$plot})
+  
+
+
+```
+
+```{r}
+observeEvent(input$genelist,{
+  
+    req(input$genelist)
+      
+     selected_gene <- df_genes %>% filter(Genes == input$genelist)
+    # 
+     g_left <- min(selected_gene$left_pos, na.rm = T)
+    # 
+     g_right <- max(selected_gene$right_pos, na.rm = T)
+    # 
+    # print("g_positions")
+    # print(g_left)
+    # print(g_right)
+    # 
+     #if(g_left < 1 | g_left >  4641652 | g_right <1 | g_right  > 4641652){
+    #   
+    #   g_left <- input$g_left_pos
+    #   g_right <- input$g_right_pos
+    # }
+    # 
+     updateNumericInput(session,"g_left_pos", value = g_left)
+    # 
+     updateNumericInput(session,"g_right_pos", value = g_right)
+     
+     session$sendCustomMessage(type = 'plot_set', message = input$genelist)
+    # 
+    # updateNumericInput(session,"TO_left_pos", value = g_left)
+    # 
+    # updateNumericInput(session,"TO_right_pos", value = g_right)
+    
+    #source('TO_tools.R')
+  
+    #genome <- as.character(readDNAStringSet("MG1655_U000963.fasta"))
+
+    #print(get_target_oligo(to_left, to_right,genome = genome, verbose = T))
+  
+},priority = 2)
+
+observeEvent(input$plot_selected,{
+  
+  req(input$plot_selected)
+      
+    selected_genes <- df_genes %>% filter(Genes %in% input$plot_selected)
+    
+    gene_dir <- selected_genes$Direction[1]
+
+#----------------- Deletion -----------------------------      
+# TO deletes everything except start and stop codon
+    
+    if(input$TO_type == 'deletion' ){
+      
+      to_left <- min(selected_genes$left_pos, na.rm = T) + 2
+      
+      to_right <- max(selected_genes$right_pos, na.rm = T) - 2
+      
+    }
+    
+#----------------- N-terminal -----------------------------  
+#TO inserts in between first nucleotide and -1 nucleotide  
+      
+    if(input$TO_type == 'N-terminal'){
+      
+      if(gene_dir=='+'){
+        
+        gene_start <- min(selected_genes$left_pos, na.rm = T)
+        
+        to_left <- gene_start - 1
+      
+        to_right <- gene_start        
+        
+      }
+            
+      if(gene_dir=='-'){
+        
+        gene_start <- max(selected_genes$right_pos, na.rm = T)
+        
+        to_left <- gene_start
+      
+        to_right <- gene_start + 1    
+        
+      }
+      
+    }
+    
+#----------------- C-terminal ----------------------------- 
+    
+    if(input$TO_type == 'C-terminal'){
+      
+    #TO inserts in between last nt of second to last codon and first nt of stop codon   
+  
+      if(gene_dir=='+'){
+        
+        gene_end <- max(selected_genes$right_pos, na.rm = T)
+        
+        to_left <- gene_end - 3
+      
+        to_right <- gene_end - 2        
+        
+      }
+            
+      if(gene_dir=='-'){
+        
+        gene_end <- min(selected_genes$left_pos, na.rm = T)
+        
+        to_left <- gene_end + 2
+      
+        to_right <- gene_end + 3    
+        
+      }
+      
+    } 
+    
+#----------------- Insertion -----------------------------      
+# TO inserts into exact middle of gene (as starting point)
+    
+    if(input$TO_type == 'insertion' ){
+      
+      mean_pos <- floor(mean(selected_genes$center_pos, na.rm = T))
+      
+      to_left <-  mean_pos
+      
+      to_right <- mean_pos + 1
+      
+    }
+      
+    
+    #to_left <- min(selected_genes$left_pos, na.rm = T)
+    
+    #to_right <- max(selected_genes$right_pos, na.rm = T)
+    
+    updateNumericInput(session,"TO_left_pos", value = to_left)
+    
+    updateNumericInput(session,"TO_right_pos", value = to_right)
+    
+    updateSelectInput(session, "att_dir", selected = gene_dir)
+    
+    if(input$g_left_pos>to_left){
+      
+      updateNumericInput(session,"g_left_pos", value = to_left)
+      
+    }
+    
+    if(input$g_right_pos < to_right){
+      
+      updateNumericInput(session,"g_right_pos", value = to_right)
+      
+    }
+    
+    #source('TO_tools.R')
+  
+    #genome <- as.character(readDNAStringSet("MG1655_U000963.fasta"))
+
+    #print(get_target_oligo(to_left, to_right,genome = genome, verbose = T))
+  
+})
+```
+
+```{r }
+
+
+output$some_text <- renderText({
+
+  genome <- as.character(readDNAStringSet("MG1655_U000963.fasta"))
+
+  
+  #color_html_strings(c('a','b','c'))
+  get_target_oligo(input$TO_left_pos, input$TO_right_pos, homology = input$hom_len, attB_dir = input$att_dir, genome = genome, verbose = F, html_format=T, surround = input$surround_len)
+  #actionButton('copy_TO_2', 'Copy Target Oligo', onclick=paste0('navigator.clipboard.writeText("',"test _2",'")'))
+
+  })
+```
+
+```{r}
+#style = "margin-bottom: 10px;"
+#style = "margin-top: -10px;")
+
+browser_controls <- fluidRow(
+  column(actionButton("g_left_L", NULL, icon = icon("arrow-left")), align = "center", width = 1, style = "padding-right: 0px;",style = "padding-top: 25px;"),
+  column(numericInput("g_left_pos", 'Browser Left', 788831 ),align = "center",width = 2,style = "padding-right: 5px;",style = "padding-left: 5px;"), 
+  column(actionButton("g_left_R", NULL, icon = icon("arrow-right")), align = "center",width = 1, style = "padding-left: 0px;",style = "padding-top: 25px;"),
+  column(selectInput('step_size_g', 'step size', choices = c(1,10,100,1000,10000),selected = 1000),width =2),
+  column(actionButton("g_right_L", NULL, icon = icon("arrow-left")), align = "center",width = 1,style = "padding-right: 0px;",style = "padding-top: 25px;"),
+  column(numericInput("g_right_pos", 'Browser Right', 789979),align = "center", width=2,style = "padding-right: 5px;",style = "padding-left: 5px;"),
+  column(actionButton("g_right_R", NULL, icon = icon("arrow-right")),align = "center", width = 1,style = "padding-left: 0px;",style = "padding-top: 25px;"),
+  column(actionButton("g_update", "Update Plot!", width = '100%'), align = "center",width = 2,style = "padding-top: 25px;",style =  "padding-left: 0px;",style =  "padding-right: 25px;"),
+  )
+  #column(checkboxInput('auto_update',"Auto", value = F), width =1)
+
+
+output$copy_button <- renderUI({
+#observeEvent(input$TO_left_pos, {
+   genome <- as.character(readDNAStringSet("MG1655_U000963.fasta"))
+   oligo <- get_target_oligo(input$TO_left_pos, input$TO_right_pos, homology = input$hom_len, attB_dir = input$att_dir,genome = genome, verbose = F, html_format=F)
+#   onclick("copy_TO", 'navigator.clipboard.writeText("does copy paste work? updated")')
+  
+  actionButton('copy_TO_2', 'Copy Target Oligo', onclick=paste0('navigator.clipboard.writeText("',oligo,'")'), width = '100%')
+#})
+})
+
+to_controls <- fluidRow(
+  column(actionButton("TO_left_L", NULL, icon = icon("arrow-left")), align = "center", width = 1, style = "padding-right: 0px;",style = "padding-top: 25px;"),
+  column(numericInput("TO_left_pos", 'TO Left', 788831 ),align = "center",width = 2,style = "padding-right: 5px;",style = "padding-left: 5px;"), 
+  column(actionButton("TO_left_R", NULL, icon = icon("arrow-right")), align = "center",width = 1, style = "padding-left: 0px;",style = "padding-top: 25px;"),
+  column(selectInput('step_size_TO', 'step size', choices = c(1,10,100,1000,10000)),width =2),
+  column(actionButton("TO_right_L", NULL, icon = icon("arrow-left")), align = "center",width = 1,style = "padding-right: 0px;",style = "padding-top: 25px;"),
+  column(numericInput("TO_right_pos", 'TO Right', 789979),align = "center", width=2,style = "padding-right: 5px;",style = "padding-left: 5px;"),
+  column(actionButton("TO_right_R", NULL, icon = icon("arrow-right")),align = "center", width = 1,style = "padding-left: 0px;",style = "padding-top: 25px;"),
+  column(uiOutput("copy_button"), width = 2,style =  "padding-left: 0px;",style = "padding-top: 25px;",style =  "padding-right: 25px;")
+  )
+
+
+
+#mainPanel(htmlOutput("some_text")),
+mainPanel(browser_controls, ggiraph::girafeOutput("plot"),to_controls,htmlOutput("some_text", align = 'center'),HTML("<br>"),renderText({warning$long}), width = 12)
+
+```
+
+```{r}
+observeEvent(input$step_size_g,{
+    
+  updateNumericInput(session,"g_left_pos", step = input$step_size_g)
+  updateNumericInput(session,"g_right_pos", step = input$step_size_g)
+    
+})
+
+observeEvent(input$step_size_TO,{
+    
+  updateNumericInput(session,"TO_left_pos", step = input$step_size_TO)
+  updateNumericInput(session,"TO_right_pos", step = input$step_size_TO)
+    
+})
+
+```
+
+```{r}
+
+observeEvent(input$g_left_L,{
+  
+  val <-  as.integer(input$g_left_pos) - as.integer(input$step_size_g)
+  
+  updateNumericInput(session,"g_left_pos", value = val)
+  
+})
+
+observeEvent(input$g_left_R,{
+  
+  val <-  as.integer(input$g_left_pos) + as.integer(input$step_size_g)
+  
+  updateNumericInput(session,"g_left_pos", value = val)
+  
+})
+
+observeEvent(input$g_right_L,{
+  
+  val <-  as.integer(input$g_right_pos) - as.integer(input$step_size_g)
+  
+  updateNumericInput(session,"g_right_pos", value = val)
+  
+})
+
+observeEvent(input$g_right_R,{
+  
+  val <-  as.integer(input$g_right_pos) + as.integer(input$step_size_g)
+  
+  updateNumericInput(session,"g_right_pos", value = val)
+  
+})
+  
+
+
+```
+
+```{r}
+
+observeEvent(input$TO_left_L,{
+  
+  val <-  as.integer(input$TO_left_pos) - as.integer(input$step_size_TO)
+  
+  updateNumericInput(session,"TO_left_pos", value = val)
+  
+})
+
+observeEvent(input$TO_left_R,{
+  
+  val <-  as.integer(input$TO_left_pos) + as.integer(input$step_size_TO)
+  
+  updateNumericInput(session,"TO_left_pos", value = val)
+  
+})
+
+observeEvent(input$TO_right_L,{
+  
+  val <-  as.integer(input$TO_right_pos) - as.integer(input$step_size_TO)
+  
+  updateNumericInput(session,"TO_right_pos", value = val)
+  
+})
+
+observeEvent(input$TO_right_R,{
+  
+  val <-  as.integer(input$TO_right_pos) + as.integer(input$step_size_TO)
+  
+  updateNumericInput(session,"TO_right_pos", value = val)
+  
+})
+  
+
+
+```
+
+
+```{r}
+
+#url_params <- reactiveValues(inputs=NULL)
+
+observe({
+  
+    query <- parseQueryString(session$clientData$url_search)
+    if (!is.null(query[['g_left_pos']])) {
+      updateNumericInput(session, "g_left_pos", value = query[['g_left_pos']])
+    }
+    if (!is.null(query[['g_right_pos']])) {
+      updateNumericInput(session, "g_right_pos", value = query[['g_right_pos']])
+    }
+    if (!is.null(query[['TO_left_pos']])) {
+      updateNumericInput(session, "TO_left_pos", value = query[['TO_left_pos']])
+    }
+    if (!is.null(query[['TO_right_pos']])) {
+      updateNumericInput(session, "TO_right_pos", value = query[['TO_right_pos']])
+    }
+    if (!is.null(query[['att_dir']])) {
+      updateSelectInput(session, "att_dir", selected = query[['att_dir']])
+    }
+    if (!is.null(query[['TO_type']])) {
+      updateSelectInput(session, "TO_type", selected = query[['TO_type']])
+    }
+    if (!is.null(query[['hom_len']])) {
+      updateSliderInput(session, "hom_len", value = query[['hom_len']])
+    }
+    if (!is.null(query[['surround_len']])) {
+      updateSliderInput(session, "surround_len", value = query[['surround_len']])
+    }
+    # if (!is.null(query[['auto_update']])) {
+    #   updateMaterialSwitch(session, "auto_update", value = as.logical(query[['auto_update']]))
+    # }
+    if (!is.null(query[['genelist']])) {
+      updateSelectizeInput(session, "genelist", selected = query[['genelist']])
+    }
+    #updateSelectizeInput(session, "genelist", selected = 'NULL')
+  
+    
+})
+
+```
+
+# Instructions
+
+## 
+
+### 
+
+#### Intro
+
+This is an app to design targeting oligos for ORBIT, a method to make genome modifications to *E. coli*. Use the genome browser under `Target oligo design` to specify the homology arms of your targeting oligo to create your desired ORBIT modification.
+
+More information on ORBIT genetics can be found [here](https://www.saunderslab.org/research/orbit).
+
+This app uses the E. coli MG1655 genome (Genbank U00096.3) and gene annotations pulled from EcoCyc database.
+
+Start by browsing to your gene or genomic region of interest.
+
+**Genome browsing**
+
+-   If you are interested in a specific gene, the easiest way to begin is by selecting a gene from the drop down menu in the top left. This will make the app jump to your gene of interest and create a targeting oligo for that gene.
+
+-   If you are interested in a genomic region, you may enter the genomic window positions into the `Browser Left` and `Browser Right` buttons.
+
+-   If you are just exploring, use the arrows next to `Browser Left` and `Browser Right` in conjunction with `step size` to scroll through the genome.
+
+**Specify a targeting oligo (TO)**
+
+-   In the left sidebar, choose what type of TO you are trying to design. This is a starting point and can be fine tuned later.
+
+    -   **`Deletion`** - oligo will leave start and stop codon of gene, but remove intervening sequence and replace with attB site.
+
+    -   **`N-terminal`** - oligo will insert attB site immediately upstream of the start codon of a gene.
+
+    -   **`C-terminal`** - oligo will insert attB site immediately before stop codon of a gene (and immediately after the second to last codon).
+
+    -   **`Insertion`** - oligo will insert attB site into the center of a gene. This is not recommended, but can be a useful starting point.
+
+-   To create a targeting oligo for a gene, simply click on the gene. It should become highlighted red and the TO left and right arms will appear on the plot as orange and blue dots.
+
+-   Adjust the specific TO position by using the arrows and numeric inputs `TO Left` and `TO Right` in conjunction with `step size` underneath the genome plot.
+
+-   Use the slider `Flanking sequence length` to display the sequencing surrounding the TO to make sure it is in the intended position.
+
+-   Beneath the genome plot, the specified TO will be generated. The homology arms are colored to match the plot, however, the oligo is displayed 5' -\> 3' and targets the lagging strand. This depends on the genomic position (replichore), but is automatically accounted for.
+
+-   Tweak the TO parameters on the left sidebar to get the correct `Homology arm length` and `attB direction`. Typically 82 nt of homology is used, since the attB is 38 nt, that gives 120 nt oligo, which is available from Sigma. The attB site usually faces the same direction as the target gene.
+
+-   Hit `Copy TO` to add the displayed TO sequence to your clipboard. This sequence can be ordered directly from commercial vendors.
+
+**Auto update**
+
+-   The genome browser plot will auto update while the `Auto update plot` switch remains on, so changing parameters rapidly may bog down the app since each input causes a new plot to be generated.
+
+-   For genomic regions \>100kb, the auto update function will turn off and you must press `Update Plot!` to update. Genomic regions \>500kb will not be plotted.
+
+-   For working with larger genomic regions or selecting multiple genes, you may toggle `Auto update plot` to "off" and go into a manual update mode that requires pressing `Update Plot!`.
+
+**Share**
+
+-   The `Share` button (left side) will copy a link that contains the TO parameters to your clipboard, and this link is automatically parsed by the design app. Therefore a TO can be saved or shared through the copied link.
+
+#### FAQs
+
+##### 1. How can I design a TO to delete multiple genes?
+
+-   *To delete multiple genes, either input the genomic positions in `TO Left` & `TO Right` or click on multiple genes in the plot. Multiple genes are selected in the plot if they are highlighted red at the same time. This can achieved by clicking quickly before the  plot auto updates, or by turning `Auto update plot` to `OFF` and then selecting multiple genes and finally clicking `Update Plot!`. A TO will be generated that deletes the entire region between the start and stop of the two (or more) genes.*
+
+##### 2. Why don't the orange and blue arms match between the plot and the colored text of the targeting oligo?
+
+-   *The TO is displayed as the 5' to 3' sequence that is directly ordered from a commercial vendor. The TO is designed to target the lagging strand, so if the genomic target is in replichore #1 (`position > ori = 3923882.5 or position < ter = 1590250.5`) then the 5' end of the TO is the right homology arm and the 3' end is the left homology arm.* 
+
+##### 3. How do I order this oligo?
+
+-   *Just click `Copy TO` to get the 5' -> 3' oligo sequence copied to your clipboard. This sequence can be ordered directly from commercial vendors with no additional modifications or purification (desalting is standard).*

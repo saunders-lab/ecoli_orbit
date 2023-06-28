@@ -1,0 +1,11 @@
+﻿condition,purification,replicate,LB_count,Kan_count
+p265,desalt,1,640000,800
+p265,desalt,2,680000,700
+p395 cartridge purified,cartridge,1,640000,620
+p395 cartridge purified,cartridge,2,560000,1110
+p396 HPLC purified,HPLC,1,730000,1090
+p396 HPLC purified,HPLC,2,490000,880
+p397 PAGE purified,PAGE,1,600000,1550
+p397 PAGE purified,PAGE,2,690000,2000
+pInt only,control,1,770000,18
+pInt only,control,2,970000,28

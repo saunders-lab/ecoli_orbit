@@ -1,0 +1,61 @@
+LOCUS       galK_BC16N_ORBIT_integra 313 bp ds-DNA     linear       16-MAY-2023
+DEFINITION  .
+FEATURES             Location/Qualifiers
+     misc_feature    1..24
+                     /label="P7_adapter"
+     primer          1..59
+                     /label="p7_i7_PCR2_fwd"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATgtcgtgatGTGACTGGAGTTCAGACGTGTGCTCTT"
+     misc_feature    33..66
+                     /label="Read 2 (illumina TruSeq)"
+     primer          40..86
+                     /label="galKBC16N_PCR_1_fwd"
+                     /note="sequence: GAGTTCAGACGTGTGCTCTTCCGATCTTACCATCCCTGCGTTGTTAC"
+     primer          67..86
+                     /label="galKBC16N_fwd"
+                     /note="sequence: TACCATCCCTGCGTTGTTAC"
+     gene            67..147
+                     /label="galM"
+     misc_feature    67..164
+                     /label="genome"
+     misc_feature    132..164
+                     /label="galK_homology_arm"
+     primer          complement(132..199)
+                     /label="galK_1kb_BC16N_attB_120nt_down"
+                     /note="sequence: tctccgtcgtcaggatcatNNNNNNNNNNNNNNNNTCACAAGGAGCAGGACAGTGCTGAACGAAACTC"
+     gene            complement(141..164)
+                     /label="galK"
+     misc_feature    complement(155..164)
+                     /label="post_BC"
+     misc_feature    165..180
+                     /label="BC"
+     misc_feature    complement(181..190)
+                     /label="pre_BC"
+     misc_feature    181..199
+                     /label="attB_L"
+     misc_feature    181..223
+                     /label="att_L"
+     misc_feature    200..223
+                     /label="bxb1_attP_L"
+     misc_feature    complement(200..248)
+                     /label="pInt_ORBIT"
+     misc_feature    224..243
+                     /label="Spacer"
+     primer          complement(229..313)
+                     /label="PCR_2_rev_7n"
+                     /note="sequence: AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTnnnnnnngaactattacacgtcttgag"
+     primer          complement(229..248)
+                     /label="galKBC16N_PCR1_rev"
+                     /note="sequence: gaactattacacgtcttgag"
+     misc_feature    complement(256..284)
+                     /label="Read 1 (illumina TruSeq)"
+     misc_feature    285..313
+                     /label="P5_adapter"
+ORIGIN
+        1 CAAGCAGAAG ACGGCATACG AGATgtcgtg atGTGACTGG AGTTCAGACG TGTGCTCTTC
+       61 CGATCTTACC ATCCCTGCGT TGTTACGCAA AGTTAACAGT CGGTACGGCT GACCATCGGG
+      121 TGCCAGTGCG GGAGTTTCGT TCAGCACTGT CCTGCTCCTT GTGANNNNNN NNNNNNNNNN
+      181 atgatcctga cgacggagac cgcggtggtt gaccagacaa accaatcgct caagacgtgt
+      241 aatagttcnn nnnnnAGATC GGAAGAGCGT CGTGTAGGGA AAGAGTGTAG ATCTCGGTGG
+      301 TCGCCGTATC ATT
+//

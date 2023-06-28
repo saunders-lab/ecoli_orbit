@@ -1,0 +1,55 @@
+LOCUS       ORBIT-genome_TdT_PCR_lib 272 bp ds-DNA     linear       16-MAY-2023
+DEFINITION  .
+FEATURES             Location/Qualifiers
+     misc_feature    1..29
+                     /label="P5_adapter"
+     primer          1..87
+                     /label="P5_read1_7n_pInt_fwd"
+                     /note="sequence: AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTnnnnnnnggaactattacacgtcttgagc"
+     misc_feature    30..58
+                     /label="Read 1 (illumina TruSeq)"
+     primer          66..87
+                     /label="pInt_out_PCR1_fwd"
+                     /note="sequence: ggaactattacacgtcttgagc"
+     misc_feature    67..115
+                     /label="pInt_backbone (genome_integrated)"
+     misc_feature    72..91
+                     /label="Spacer"
+     misc_feature    92..115
+                     /label="bxb1_attP_L"
+     misc_feature    92..134
+                     /label="att_L"
+     misc_feature    116..134
+                     /label="attB_L"
+     misc_feature    135..192
+                     /label="genome"
+     misc_feature    193..208
+                     /label="polyC_tail (lib_prep)"
+     primer          complement(193..235)
+                     /label="polyC-read2_rev"
+                     /note="sequence: GAGTTCAGACGTGTGCTCTTCCGATCTGGGGGNGGGGGGGGGG"
+     misc_feature    complement(209..242)
+                     /label="Read 2 (illumina TruSeq)"
+     primer          complement(216..272)
+                     /label="P7_i7_ATCACG_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATCGTGATGTGACTGGAGTTCAGACGTGTGCTCTT"
+     primer          complement(216..272)
+                     /label="P7_i7_TGACCA_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATTGGTCAGTGACTGGAGTTCAGACGTGTGCTCTT"
+     primer          complement(216..272)
+                     /label="P7_i7_TTAGGC_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATGCCTAAGTGACTGGAGTTCAGACGTGTGCTCTT"
+     primer          complement(216..272)
+                     /label="P7_i7_CGATGT_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATACATCGGTGACTGGAGTTCAGACGTGTGCTCTT"
+     misc_feature    243..248
+                     /label="i7 index"
+     misc_feature    249..272
+                     /label="P7_adapter"
+ORIGIN
+        1 AATGATACGG CGACCACCGA GATCTACACT CTTTCCCTAC ACGACGCTCT TCCGATCTnn
+       61 nnnnnggaac tattacacgt cttgagcgat tggtttgtct ggtcaaccac cgcggtctcc
+      121 gtcgtcagga tcatNNNNNN NNNNNNNNNN NNNNNNNNNN NNNNNNNNNN NNNNNNNNNN
+      181 NNNNNNNNNN NNCCCCCCCC CCCCCCCCAG ATCGGAAGAG CACACGTCTG AACTCCAGTC
+      241 ACnnnnnnAT CTCGTATGCC GTCTTCTGCT TG
+//

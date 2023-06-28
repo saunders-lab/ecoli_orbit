@@ -1,0 +1,150 @@
+---
+title: "Figure 3: Gold Standards"
+subtitle: 'E. coli ORBIT 2023'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+
+# Notes
+
+This figure contains several datatypes from experiments that were used benchmark ORBIT and compare to the lambda Red method. Data figures were made in R notebooks and exported as pdfs. Cosmetic improvements were made in Adobe Illustrator. Note that Figures 3A & 3C were made in Adobe Illustrator.
+
+----
+
+Setup packages and plotting for the notebook:
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+# Check packages
+source("../tools/package_setup.R")
+# Load packages
+library(tidyverse)
+library(cowplot)
+library(kableExtra)
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+# Load plotting tools
+source("../tools/plotting_tools.R")
+#Modify the plot theme
+theme_set(theme_notebook())
+```
+
+-----
+
+# Fig. 3B - ORBIT vs. Lambda Red efficiency
+
+Read in the ORBIT data.
+
+```{r}
+
+df_gold <- read_csv('../../data/low_throughput_experiments/2022_08_31_gold_stds.csv') %>% #read in csv
+  mutate(eff = Kan_count / LB_count) %>% group_by(locus) %>% mutate(avg_eff = mean(eff)) #calculate efficiency and average efficiency for replicates
+
+df_gold %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+Read in the lambda Red data.
+
+```{r}
+
+df_lam <- read_csv('../../data/low_throughput_experiments/2022_09_07_lambda_red_galK_AA_eff.csv') %>% #read in csv
+  mutate(eff = Kan_count / LB_count) %>% group_by(locus) %>% mutate(avg_eff = mean(eff)) #calculate efficiency and average efficiency for replicates
+
+df_lam %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+Next we combine the ORBIT and lambda Red data and calculate the ratio of efficiencies:
+
+```{r}
+df_lam_gold <- bind_rows(df_gold %>% mutate(exp = 'ORBIT'), df_lam %>% mutate(exp = 'lambda_red')) %>% 
+  mutate(locus = factor(locus, levels =c('galK','hisA','metA','leuD','-'))) %>% 
+  mutate(exp = factor(exp, levels = c('ORBIT','lambda_red')))
+
+df_lam_gold %>% filter(replicate == 1) %>% 
+  select(-LB_count,-Kan_count,-eff) %>% 
+  pivot_wider(names_from = exp, values_from = avg_eff) %>% 
+  mutate(orbit_lam_ratio = ORBIT / lambda_red)
+
+```
+
+Then we can plot the data:
+
+```{r}
+
+#Calculate negative control values for ORBIT and lambda red
+orbit_bg <- (df_lam_gold %>% filter(locus=='-' & exp == 'ORBIT'))$avg_eff[1]
+lam_bg <-  (df_lam_gold %>% filter(locus=='-' & exp == 'lambda_red'))$avg_eff[1]
+
+#Plot individual datapoints, mean dots and crossbars and negative control X's
+plot_lam_gold <- ggplot(df_lam_gold %>% filter(locus!='-') %>% mutate(bg = ifelse(exp == 'ORBIT',orbit_bg, lam_bg)), aes(x = exp, y = eff , color = locus)) + 
+  geom_point(data = . %>% filter(replicate ==1), aes(y = bg), shape = 4, color= 'light gray')+
+  stat_summary(fun = 'mean', geom = 'crossbar',width = 0.5, size = 0.25)+
+  stat_summary(fun = 'mean', geom = 'point')+
+  geom_point(position = position_jitterdodge(dodge.width = 1, jitter.width = 1), shape = 21) + 
+  facet_grid(~locus)+
+  scale_color_viridis_d()+
+  scale_y_log10(labels = scales::label_percent(accuracy = 0.0001), breaks = c(0.000001, 0.0001, 0.01)) + 
+  scale_x_discrete(labels = c('ORBIT','λRed'))+
+  labs(y = 'Efficiency', x = NULL, fill = 'Strand') + guides(color = 'none') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+
+plot_lam_gold
+```
+
+# Fig. 3D - ORBIT accuracy
+
+These data are accuracy measurements where recombinants were tested for growth on permissive and selective media. 
+
+```{r}
+df_gold_acc <- read_csv("../../data/low_throughput_experiments/2022_08_30_gold_std_2_accuracy.csv") %>% 
+    mutate(accuracy = 1-(selective_colonies / permissive_colonies)) %>% 
+  group_by(locus) %>% 
+  mutate(avg_accuracy = mean(accuracy)) %>% 
+  mutate(locus = factor(locus, levels = c('galK','hisA','metA','leuD')))
+
+df_gold_acc %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+```
+
+Now let's plot the data:
+
+```{r}
+plot_gold_acc <- ggplot(df_gold_acc, aes(x = locus, y = accuracy , color = locus)) + 
+  geom_hline(yintercept = 0, linetype =2, color = 'light gray')+ #negative control accuracy was 0
+  stat_summary(fun = 'mean', geom = 'crossbar',width = 0.5, size = 0.25)+
+  stat_summary(fun = 'mean', geom = 'point')+
+  geom_jitter(width =0.1, height = 0, shape = 21) + 
+  scale_y_continuous(labels = scales::label_percent())+
+  labs(y = 'Accuracy', x = 'Locus')+
+ # facet_grid(~locus)+
+  scale_color_viridis_d()
+
+plot_gold_acc
+
+```
+
+# Create Fig. 3
+
+```{r}
+theme_set(theme_figure())
+
+fig_3_gold <- plot_grid(plot_lam_gold + guides(color = 'none'), plot_gold_acc + guides(color = 'none'), ncol = 1, rel_heights = c(1,0.66),
+                   align = 'hv', axis = 'lr', scale = 0.9,
+                   labels = c('B','D'))
+
+
+fig_3_gold
+
+save_plot("../../figures/r_pdf_figs/main_figs/fig_3_gold_std.pdf", fig_3_gold, base_width = 3.5, base_height = 3.75)
+```
+
+```{r}
+sessionInfo()
+```

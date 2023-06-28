@@ -1,0 +1,132 @@
+---
+title: "Supplemental Figure: Protocol optimization"
+subtitle: 'E. coli ORBIT 2022'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+
+# Notes
+
+This figure contains data from many different experiments that were used to optimize the protocol for ORBIT. 
+
+----
+
+Setup packages and plotting for the notebook:
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+# Check packages
+source("../package_setup.R")
+# Load packages
+library(tidyverse)
+library(cowplot)
+library(kableExtra)
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+# Load plotting tools
+source("../plotting_tools.R")
+#Modify the plot theme
+theme_set(theme_notebook())
+```
+
+-----
+
+# Fig. 2A - Helper plasmid induction conditions
+
+Read in the data.
+
+```{r}
+
+
+df_po <- read_csv("../../data/2022_09_15_PO_bonds_orbit.csv") %>% mutate(eff = Kan_count / LB_count)
+
+
+df_po
+```
+
+```{r}
+po_control <- mean((df_po %>% filter(PO_bonds == 'control'))$eff)
+
+plot_po <- ggplot(df_po %>% filter(PO_bonds != 'control'), aes(x = factor(PO_bonds), y = eff)) + 
+  geom_hline(yintercept = po_control, color = 'light gray', linetype = 2) + 
+  geom_jitter(shape = 21, width = 0.1, height = 0) +
+  stat_summary(geom = 'point', fun = 'mean')+
+  scale_y_continuous(labels = scales::label_percent(accuracy = 0.01))+
+  #scale_y_log10(breaks = c(0.0001, 0.001, 0.01), limits = c(0.00003, 0.01), labels = scales::label_percent(accuracy = 0.01))+
+  scale_x_discrete(labels = c('none', "2x 5' PO", "2x 5' PO\n2x 3' PO"))+
+  labs(x = 'Targeting oligo PO bonds', y = 'Efficiency')+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_po
+```
+
+```{r}
+df_pur <- read_csv("../../data/2022_09_07_TO_purification.csv") %>% mutate(eff = Kan_count / LB_count) %>% 
+  mutate(purification = factor(purification, levels  = c('desalt','cartridge','HPLC','PAGE','control')))
+
+df_pur
+```
+
+```{r}
+pur_control <- mean((df_pur %>% filter(purification == 'control'))$eff)
+
+plot_pur <- ggplot(df_pur %>% filter(purification != 'control'), aes(x = purification, y = eff)) + 
+  geom_hline(yintercept = pur_control, color = 'light gray', linetype = 2) + 
+  geom_jitter(shape = 21, width = 0.1, height = 0) +
+  stat_summary(geom = 'point', fun = 'mean')+
+  scale_y_continuous(labels = scales::label_percent(accuracy = 0.01))+
+  #scale_y_log10(breaks = c(0.0001, 0.001, 0.01), limits = c(0.00002, 0.01), labels = scales::label_percent(accuracy = 0.01))+
+  #scale_x_discrete(labels = c('none', "2x 5' PO", "2x 5' PO + 2x 3' PO"))+
+  labs(x = 'Targeting oligo purification method', y = 'Efficiency')+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_pur
+```
+
+```{r}
+df_co <- read_csv("../../data/2022_10_10_oligo_supplier.csv") %>% mutate(eff = Kan_count / LB_count)  %>% 
+  mutate(locus = factor(locus, levels  = c('galK','hisA','metA','leuD'))) %>% 
+  group_by(supplier, locus) %>% 
+  mutate(avg_eff = mean(eff))
+  
+
+df_co
+```
+
+```{r}
+
+plot_co <- ggplot(df_co, aes(x = supplier, y = eff, color = locus, group = locus)) + 
+  geom_jitter(shape = 21, width = 0.1, height = 0, alpha = 0.4) +
+  geom_point(aes(y = avg_eff))+
+  geom_line(aes(y = avg_eff))+
+  #scale_y_continuous(labels = scales::label_percent(accuracy = 0.01))+
+  scale_y_log10( labels = scales::label_percent(accuracy = 0.001))+
+  scale_color_viridis_d()+
+  labs(x = 'Targeting oligo supplier', y = 'Efficiency')+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_co
+```
+
+
+```{r}
+theme_set(theme_figure())
+
+supp_protocol <- plot_grid(plot_po, plot_pur, plot_co + guides(color = 'none'), nrow = 1, 
+                   align = 'hv', axis = 'lr', scale = 1.0,
+                   labels = 'AUTO')
+
+supp_protocol
+
+save_plot("../../figures/supplement/supp_protocol_optimization.pdf", plot = supp_protocol, base_height = 3, base_width = 7)
+```
+
+
+```{r}
+sessionInfo()
+```

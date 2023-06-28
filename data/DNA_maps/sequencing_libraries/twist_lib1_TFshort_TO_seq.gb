@@ -1,0 +1,69 @@
+LOCUS       twist_TFshort_TO_seq     301 bp ds-DNA     linear       16-MAY-2023
+DEFINITION  .
+FEATURES             Location/Qualifiers
+     misc_feature    1..29
+                     /label="P5_adapter"
+     primer          1..85
+                     /label="P5_read1_7n_orth1074_fwd"
+                     /note="sequence: AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTnnnnnnngattggataaatggccgcag"
+     misc_feature    30..58
+                     /label="Read 1 (illumina TruSeq)"
+     misc_feature    66..67
+                     /label="fwd_primer_5'POs"
+     misc_feature    66..85
+                     /label="fwd_primer"
+     primer          66..85
+                     /label="orth_1074_fwd"
+                     /note="sequence: gattggataaatggccgcag"
+     primer          complement(75..89)
+                     /label="TO_BtsI_guide_1074"
+                     /note="sequence: agcactgcggccatt"
+     misc_feature    82..89
+                     /label="RE_BtsI"
+     misc_feature    90..134
+                     /label="homology"
+     misc_feature    135..172
+                     /label="attB_fwd"
+     misc_feature    173..217
+                     /label="homology"
+     misc_feature    218..221
+                     /label="RE_MboI"
+     primer          complement(218..232)
+                     /label="TO_MboI_guide_527"
+                     /note="sequence: ggtcgtattccgatc"
+     misc_feature    complement(218..237)
+                     /label="rev_primer"
+     primer          complement(218..237)
+                     /label="orth_527_rev"
+                     /note="sequence: aagagggtcgtattccgatc"
+     primer          complement(218..264)
+                     /label="orth527_read2_PCR1_rev"
+                     /note="sequence: GAGTTCAGACGTGTGCTCTTCCGATCTaagagggtcgtattccgatc"
+     misc_feature    complement(237..237)
+                     /label="rev_primer_5'P"
+     misc_feature    complement(238..271)
+                     /label="Read 2 (illumina TruSeq)"
+     primer          complement(245..301)
+                     /label="P7_i7_ATCACG_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATCGTGATGTGACTGGAGTTCAGACGTGTGCTCTT"
+     primer          complement(245..301)
+                     /label="P7_i7_TTAGGC_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATGCCTAAGTGACTGGAGTTCAGACGTGTGCTCTT"
+     primer          complement(245..301)
+                     /label="P7_i7_TGACCA_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATTGGTCAGTGACTGGAGTTCAGACGTGTGCTCTT"
+     primer          complement(245..301)
+                     /label="P7_i7_CGATGT_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATACATCGGTGACTGGAGTTCAGACGTGTGCTCTT"
+     misc_feature    272..277
+                     /label="i7 index"
+     misc_feature    278..301
+                     /label="P7_adapter"
+ORIGIN
+        1 AATGATACGG CGACCACCGA GATCTACACT CTTTCCCTAC ACGACGCTCT TCCGATCTnn
+       61 nnnnngattg gataaatggc cgcagtgctN NNNNNNNNNN NNNNNNNNNN NNNNNNNNNN
+      121 NNNNNNNNNN NNNNggcttg tcgacgacgg cggtctccgt cgtcaggatc atNNNNNNNN
+      181 NNNNNNNNNN NNNNNNNNNN NNNNNNNNNN NNNNNNNgat cggaatacga ccctcttAGA
+      241 TCGGAAGAGC ACACGTCTGA ACTCCAGTCA CnnnnnnATC TCGTATGCCG TCTTCTGCTT
+      301 G
+//

@@ -1,0 +1,13 @@
+﻿cuvette,condition,replicate,LB_count,Kan_count,Chlor_count,Kan_Chlor_count,Carb_count,Kan_Chlor_Amp_count
+1,galKattB1_hisAattB1_chlorAttP1_kanAttP1,1,19000000,21000,170000,134,,
+2,galKattB1_hisAattB1_chlorAttP1_kanAttP1,2,12000000,17100,200000,75,,
+3,galKattB2_hisAattB1_chlorAttP2_kanAttP1,1,14000000,6400,37000,61,,
+4,galKattB2_hisAattB1_chlorAttP2_kanAttP1,2,9400000,19000,120000,280,,
+5,galKattB3_hisAattB1_chlorAttP3_kanAttP1,1,94000000,19000,38000,112,,
+6,galKattB3_hisAattB1_chlorAttP3_kanAttP1,2,6400000,18000,45000,90,,
+7,galKattB5_hisAattB1_chlorAttP5_kanAttP1,1,13000000,28000,62000,160,,
+8,galKattB5_hisAattB1_chlorAttP5_kanAttP1,2,19000000,20000,49000,100,,
+9,galK_hisA_metA100_kan_chlor_amp,1,13000000,29000,150000,149,250000,250
+10,galK_hisA_metA100_kan_chlor_amp,2,18000000,34000,132000,130,300000,120
+11,p265_Kan,1,13000000,16000,,,,
+12,pInt_only_Kan_Chlor,2,8200000,130,1500,0,,

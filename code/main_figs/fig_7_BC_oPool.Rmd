@@ -1,0 +1,189 @@
+---
+title: "Figure 7: galKBC16N & IDT oPool"
+subtitle: 'E. coli ORBIT 2022'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+
+# Notes
+
+This figure contains data from two ORBIT experiments where mutant libraries were created with mixtures of targeting oligos. Data figures were made in R notebooks and exported as pdfs. Cosmetic improvements were made in Adobe Illustrator. Note that diagrams for Figures 7A, & 7C were made in Adobe Illustrator.
+
+----
+
+Setup packages and plotting for the notebook:
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+# Check packages
+source("../tools/package_setup.R")
+# Load packages
+library(tidyverse)
+library(cowplot)
+library(kableExtra)
+library(ggrastr)
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+# Load plotting tools
+source("../tools/plotting_tools.R")
+#Modify the plot theme
+theme_set(theme_notebook())
+```
+
+-----
+
+# Fig. 7B - Barcode counts
+
+Read in the data for the starcode filtered barcode counts and filter for at least 4 counts. See `code/seq_data_processing/galK_BC_16N/galK_BC_16N_processing_analysis.Rmd` for how we got from raw sequencing data to this file.
+
+```{r}
+df_starcode <- read_delim("../seq_data_processing/galK_BC_16N/galKBC16N_unique_BC_starcode_counts_d3s.txt",col_names = c('seq','n'))
+
+df_starcode 
+
+```
+
+Now, let's create the plot for all barcodes that have at least 4 counts.
+
+```{r}
+df_starcode %>% filter(n>=4)
+
+plot_bc <- ggplot(df_starcode %>% filter(n>=4), aes(x = n)) + 
+  geom_histogram(color = 'black', fill = 'light gray', bins = 30, linewidth = 0.25) + 
+  scale_x_log10(limits = c(NA,1000)) + scale_y_log10() + 
+  #theme_bw() + 
+  labs(x = 'Reads', y = 'Unique Barcodes')
+
+plot_bc
+
+```
+
+# Fig. 7D - Example reads at test loci
+
+To create the figure for the test loci, we will read in all right and left side reads and the TO coordinates.
+
+```{r}
+
+df_TOs <- read_csv("../../data/seq_data/left_side_TO_libs/df_TOs.csv")
+
+
+df_read_nearest_down <- read_csv('../../data/seq_data/left_side_TO_libs/df_read_nearest_left.csv')
+df_read_nearest_up <- read_csv('../../data/seq_data/right_side_TO_libs/df_read_nearest_right.csv')
+df_read_nearest_up_down <- bind_rows(df_read_nearest_up %>% mutate(up_down = 'up'),df_read_nearest_down %>%  mutate(up_down = 'down')) %>% 
+  filter(min_val <= 500) %>% #remove all off target reads more than 500 bp away from TO (considered off target)
+  mutate(perfect = ifelse(min_val == 0, T, F))
+
+
+df_TOs
+
+df_read_nearest_up_down
+```
+
+To plot gene diagrams we will load in the coordinates for all E. coli genes and add the gene coordaintes for each TO.
+
+```{r}
+df_genes <- read_delim("../../../ecoli_ORBIT_paper_final/data/seq_data/All_instances_of_Genes_in_Escherichia_coli_K-12_substr._MG1655.txt") %>% 
+  mutate(left_pos = `Left-End-Position`, right_pos = `Right-End-Position`) %>% 
+  select(-`Left-End-Position`, -`Right-End-Position`) %>% 
+  mutate(fwd = ifelse(Direction =='+', T, F))
+
+df_genes_lib <- left_join(df_TOs %>% select(lib, 'gene_id'='gene'), df_genes, by = c('gene_id'='Genes'))
+
+df_genes_lib
+```
+
+Then we will manually define the 6 points on the gene arrow (for plotting purposes only).
+
+```{r}
+df_poly <- df_genes_lib %>% 
+ #filter(right_pos<20000) %>% 
+ pivot_longer(c(left_pos, right_pos), values_to = 'x_pos', names_to = 'left_right') %>% 
+ mutate( y_pos_bottom = 10,y_pos_top = 100, y_pos_center=31.623) %>% 
+ pivot_longer(c(y_pos_bottom,y_pos_top, y_pos_center), values_to = 'y_pos', names_to = 'top_bottom') %>% 
+ mutate(x_pos = ifelse(left_right == 'left_pos' & Direction == '-' & top_bottom !='y_pos_center', x_pos + 50, x_pos)) %>% 
+ mutate(x_pos = ifelse(left_right == 'right_pos' & Direction == '+' & top_bottom !='y_pos_center', x_pos - 50, x_pos)) %>% 
+ mutate(point_num = case_when(left_right == 'left_pos' & top_bottom == 'y_pos_bottom' ~ 1,
+left_right == 'left_pos' & top_bottom == 'y_pos_center' ~ 2,
+left_right == 'left_pos' & top_bottom == 'y_pos_top' ~ 3,
+left_right == 'right_pos' & top_bottom == 'y_pos_top' ~ 4,
+left_right == 'right_pos' & top_bottom == 'y_pos_center' ~ 5,
+left_right == 'right_pos' & top_bottom == 'y_pos_bottom' ~ 6)) %>% 
+ arrange(gene_id, point_num)
+
+df_poly
+```
+
+Finally we will arrange the reads so they plot nicely.
+
+```{r}
+
+df_read_nearest_up_down_org <- df_read_nearest_up_down %>% 
+  arrange(lib, gene_id, up_down, perfect, width ) %>% 
+  group_by(lib, gene_id, up_down, perfect) %>% 
+  mutate(read_num = row_number())
+
+df_read_nearest_up_down_org
+```
+
+Putting it all together for our 4 test genes, we will rasterize the read layer of the plot, so it doesn't overwhelm adobe illustrator.
+
+```{r}
+ kb_label <- function(x){
+ # from s to ns
+ lab <- paste(x / 1000)
+ }
+
+gene_list <- c('galK', 'hisA','metA', 'leuD')
+
+
+plot_gene_examples <- ggplot()+
+  geom_polygon(data = df_poly %>% filter(lib==0 & gene_id %in% gene_list)%>% mutate(gene_id = factor(gene_id, levels = gene_list)), aes(x = x_pos, y = y_pos, group = gene_id),fill = 'light gray')+
+    rasterise(geom_segment(data = df_read_nearest_up_down_org %>% filter(lib==0 & gene_id %in% gene_list) %>% filter(min_val <500) %>% mutate(gene_id = factor(gene_id, levels = gene_list)),
+             aes(x = start, xend = end, y = read_num, yend = read_num, color = perfect), alpha = 0.25, linewidth = 0.5), dpi = 2000, dev = "cairo")+
+  labs(x = "Genomic position (Kb)", y = 'Read count')+
+   scale_x_continuous(labels = kb_label)+
+  scale_y_log10(limits =c(1, NA))+
+  scale_color_manual(values = c("#440154FF","#21908CFF"))+
+  guides(fill = 'none')+
+  facet_wrap(~gene_id, scales = 'free', ncol = 1,strip.position = 'top') + guides(color = 'none')
+
+plot_gene_examples
+
+```
+
+Lastly, we can count the perfect rate for the reads in the figure (within 500bp of TO side.)
+
+```{r}
+
+df_read_nearest_up_down_org %>% 
+  filter(lib==0 & gene_id %in% gene_list) %>%  
+  group_by(gene_id, up_down) %>% 
+  summarise(n=n(), perfect = sum(perfect), max_val = max(min_val))%>%
+  mutate(per_perfect = perfect / n)
+```
+
+# Create figure 7
+
+
+```{r}
+theme_set(theme_figure())
+
+
+fig_7_bc_opool <- plot_grid(plot_bc, plot_gene_examples, ncol = 1,
+                   align = 'hv', axis = 'lr', scale = 1,
+                   labels = c('B','D'), rel_heights = c(1,2))
+
+
+fig_7_bc_opool
+
+save_plot("../../figures/r_pdf_figs/main_figs/fig_7_bc_opool.pdf", fig_7_bc_opool, base_width = 3, base_height = 6)
+```
+
+```{r}
+sessionInfo()
+```

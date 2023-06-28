@@ -1,0 +1,13 @@
+name: TO_design_beta
+title: TO_design_beta
+username:
+account: saunders-lab
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6659479
+bundleId: 6131563
+url: https://saunders-lab.shinyapps.io/TO_design_beta/
+when: 1658773497.20072
+lastSyncTime: 1658773497.20075
+asMultiple: FALSE
+asStatic: FALSE

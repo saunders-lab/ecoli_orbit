@@ -1,0 +1,55 @@
+LOCUS       ORBIT-genome_right_side_ 266 bp ds-DNA     linear       16-MAY-2023
+DEFINITION  .
+FEATURES             Location/Qualifiers
+     misc_feature    1..29
+                     /label="P5_adapter"
+     primer          1..83
+                     /label="P5_read1_7n_pIntRightSide_fwd"
+                     /note="sequence: AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTnnnnnnngaagcagctccagcctac"
+     misc_feature    30..58
+                     /label="Read 1 (illumina TruSeq)"
+     primer          66..83
+                     /label="pIntRightSide_out_PCR1_fwd"
+                     /note="sequence: gaagcagctccagcctac"
+     misc_feature    66..85
+                     /label="Spacer"
+     misc_feature    complement(66..109)
+                     /label="pInt_ORBIT"
+     misc_feature    86..109
+                     /label="bxb1_attP_R"
+     misc_feature    86..128
+                     /label="att_R"
+     misc_feature    110..128
+                     /label="attB_R"
+     misc_feature    129..186
+                     /label="genome"
+     misc_feature    187..202
+                     /label="polyC tail (library prep)"
+     primer          complement(187..229)
+                     /label="polyC-read2_rev"
+                     /note="sequence: GAGTTCAGACGTGTGCTCTTCCGATCTGGGGGNGGGGGGGGGG"
+     misc_feature    complement(203..236)
+                     /label="Read 2 (illumina TruSeq)"
+     primer          complement(210..266)
+                     /label="P7_i7_TTAGGC_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATGCCTAAGTGACTGGAGTTCAGACGTGTGCTCTT"
+     primer          complement(210..266)
+                     /label="P7_i7_ATCACG_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATCGTGATGTGACTGGAGTTCAGACGTGTGCTCTT"
+     primer          complement(210..266)
+                     /label="P7_i7_TGACCA_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATTGGTCAGTGACTGGAGTTCAGACGTGTGCTCTT"
+     primer          complement(210..266)
+                     /label="P7_i7_CGATGT_read2_rev"
+                     /note="sequence: CAAGCAGAAGACGGCATACGAGATACATCGGTGACTGGAGTTCAGACGTGTGCTCTT"
+     misc_feature    237..242
+                     /label="i7 index"
+     misc_feature    243..266
+                     /label="P7_adapter"
+ORIGIN
+        1 AATGATACGG CGACCACCGA GATCTACACT CTTTCCCTAC ACGACGCTCT TCCGATCTnn
+       61 nnnnngaagc agctccagcc tacacggttt gtaccgtaca ccactgagac cgccgtcgtc
+      121 gacaagccNN NNNNNNNNNN NNNNNNNNNN NNNNNNNNNN NNNNNNNNNN NNNNNNNNNN
+      181 NNNNNNCCCC CCCCCCCCCC CCAGATCGGA AGAGCACACG TCTGAACTCC AGTCACnnnn
+      241 nnATCTCGTA TGCCGTCTTC TGCTTG
+//

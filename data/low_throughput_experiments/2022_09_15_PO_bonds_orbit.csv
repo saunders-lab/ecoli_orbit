@@ -1,0 +1,13 @@
+﻿condition,replicate,PO_bonds,LB_count,Kan_count
+p265,1,0,740000,550
+p265,2,0,840000,1140
+p265,3,0,800000,1510
+p386,1,2,740000,1140
+p386,2,2,830000,1500
+p386,3,2,620000,1670
+p387,1,4,610000,930
+p387,2,4,540000,1170
+p387,3,4,500000,1100
+pInt only control,1,control,720000,40
+pInt only control,2,control,710000,19
+pInt only control,3,control,780000,26

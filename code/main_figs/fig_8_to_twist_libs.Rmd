@@ -1,0 +1,466 @@
+---
+title: "Figure 8: TO twist libraries"
+subtitle: 'E. coli ORBIT 2022'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+
+# Notes
+
+
+----
+
+Setup packages and plotting for the notebook:
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+# Check packages
+source("../tools/package_setup.R")
+# Load packages
+library(tidyverse)
+library(cowplot)
+library(patchwork)
+library(kableExtra)
+library(ggrastr)
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+# Load plotting tools
+source("../tools/plotting_tools.R")
+#Modify the plot theme
+theme_set(theme_notebook())
+```
+
+-----
+
+# Fig. 5B - Perfect reads
+
+
+```{r}
+df_read_nearest_down <- read_csv('../../data/seq_data/left_side_TO_libs/df_read_nearest_left.csv')
+df_read_nearest_up <- read_csv('../../data/seq_data/right_side_TO_libs/df_read_nearest_right.csv')
+df_read_nearest_up_down <- bind_rows(df_read_nearest_up %>% mutate(up_down = 'up'),df_read_nearest_down %>%  mutate(up_down = 'down')) %>% 
+  mutate(off_target = ifelse(min_val >500, T, F)) %>% 
+  mutate(perfect = ifelse(min_val == 0, T, F))
+
+df_read_nearest_up_down
+
+```
+
+```{r}
+
+#df_read_nearest_up_down_annot <- left_join(df_read_nearest_up_down, read_n_lab, by = 'lib') %>% 
+#  filter(lib >0) %>% 
+#  mutate(status = paste0('off_',off_target, '_p_',perfect)) %>% 
+#  mutate(status = fct_relevel(status, 'off_TRUE_p_FALSE','off_FALSE_p_FALSE','off_FALSE_p_TRUE'))
+
+df_read_nearest_up_down_annot <- df_read_nearest_up_down %>% 
+  filter(lib >0) %>% 
+  mutate(status = paste0('off_',off_target, '_p_',perfect)) %>% 
+  mutate(status = fct_relevel(status, 'off_TRUE_p_FALSE','off_FALSE_p_FALSE','off_FALSE_p_TRUE'))
+
+df_read_nearest_up_down_annot %>% group_by(lib) %>% summarise(n=n())
+df_read_nearest_up_down_annot %>% group_by(lib, up_down) %>% summarise(n=n())
+
+df_read_nearest_up_down_annot %>% group_by(lib, perfect) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
+  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE))
+
+df_read_nearest_up_down_annot %>% group_by(lib, perfect, up_down) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
+  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE))
+
+df_read_nearest_up_down_annot %>% group_by(lib, gene_id, perfect) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
+  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE))
+  
+df_read_nearest_up_down_annot %>% group_by(lib, gene_id, perfect) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
+  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE)) %>% group_by(lib) %>% summarise(mean_perf = mean(frac_perfect, na.rm = T), med_perf = median(frac_perfect, na.rm = T))
+  
+plot_perfect_reads <-   ggplot(df_read_nearest_up_down_annot, aes(x = factor(lib), fill = status)) + 
+    geom_bar(color = 'black',position = 'fill', linewidth = 0.25) +
+    scale_x_discrete(breaks = c('1','2','3'),labels = c('#1 short TFs', '#2 long TFs', '#3 small RNAs'))+
+    scale_y_continuous(labels = scales::label_percent())+
+    scale_fill_viridis_d(labels = c('Not perfect >500 bp','Not Perfect <500 bp','Perfect match'), option = 'A')  + 
+    labs(y = 'Reads', x = 'Library', fill = NULL) + theme(legend.position = 'bottom')
+
+plot_perfect_reads
+```
+
+# Fig. 5C - Targeting oligos
+
+```{r}
+
+df_TOs <- read_csv("../../../ecoli_ORBIT_paper_final/data/seq_data/right_side_TO_libs/df_TOs.csv")
+
+
+#Must have at least 1 perfect read
+df_read_nearest_all_summary_down <- df_read_nearest_down %>% 
+  filter(min_val == 0) %>% 
+  group_by(lib, gene_id) %>% 
+  summarise( n=n(), min_val = min(min_val, na.rm = T))
+
+df_read_nearest_all_summary_up <- df_read_nearest_up %>% 
+  filter(min_val == 0) %>% 
+  group_by(lib, gene_id) %>% 
+  summarise( n=n(), min_val = min(min_val, na.rm = T))
+
+df_TOs_found_down <- left_join(df_TOs, df_read_nearest_all_summary_down ,by = c('gene'='gene_id', 'lib')) %>% 
+  mutate(found_down = ifelse(is.na(n) & is.na(min_val), F, T)) 
+
+df_TOs_found_up_down <- left_join(df_TOs_found_down, df_read_nearest_all_summary_up, suffix = c('_down','_up') ,by = c('gene'='gene_id', 'lib'))%>% 
+  mutate(found_up = ifelse(is.na(n_up) & is.na(min_val_up), F, T)) %>% 
+  mutate(found_score = found_down + found_up)
+
+df_TOs_found_up_down %>% group_by(lib, found_score) %>% summarise(n=n(), min_reads_up = min(n_up), min_reads_down = min(n_down))
+
+df_TOs_found_up_down %>% group_by(lib) %>% summarise(n=n())
+
+df_TOs_found_up_down
+
+plot_tos <- df_TOs_found_up_down %>% 
+  filter(lib >0) %>% 
+  ggplot(aes(x = factor(lib), fill = factor(found_score))) + geom_bar(position = 'stack', color = 'black', linewidth = 0.25)+
+  scale_fill_viridis_d( option = 'A', labels = c('Absent','Present in Up or Dn','Present in both')) + 
+  scale_x_discrete(breaks =c('0','1','2','3'),labels = c('#0 oPool','#1 short TFs','#2 long TFs','#3 small RNAs'))+
+  labs(fill = 'Mutations found', x = "Mutant library", y = '# Designed targeting oligos') + theme(legend.position = 'bottom')
+
+plot_tos
+```
+
+```{r}
+df_TOs_found_essential_updated <- read_csv("../../data/high_throughput_experiments/df_TOs_found_essential_updated.csv")
+
+df_TOs_found_essential_updated
+```
+
+```{r}
+
+plot_essential <- ggplot(df_TOs_found_essential_updated %>% filter(found_score == 0) %>% mutate(essential = factor(essential, levels = c('essential','probable essential / perturbing','not essential'))), 
+       aes(x = essential)) + 
+  geom_bar(fill = 'light gray')+
+  labs(y = 'absent target genes')
+
+plot_essential
+```
+
+# 5D. Example genes from each library
+
+```{r}
+#don't pick genes also in lib 0 
+gene_list <- c('soxS', 'lysR','mcaS')
+
+df_TOs %>% filter(gene == 'soxS')
+
+df_TOs %>% filter(gene == 'lysR')
+
+df_TOs %>% filter(gene == 'mcaS')
+
+df_TOs %>% filter(lib == 2)
+
+df_read_nearest_all_summary_down %>% filter(lib == 2)
+
+df_read_nearest_up_down %>% filter(gene_id=='soxS') %>% filter(min_val<=500) %>% group_by(perfect) %>% summarise(n=n())
+
+df_read_nearest_up_down %>% filter(gene_id=='lysR') %>% filter(min_val<=500) %>% group_by(perfect) %>% summarise(n=n())
+
+df_read_nearest_up_down %>% filter(gene_id=='mcaS') %>% filter(min_val<=500) %>% group_by(perfect) %>% summarise(n=n())
+
+
+plot_reads <- ggplot()+
+  geom_rect(data = df_TOs %>% select(lib, gene_id = gene, left_oligo_pos, right_oligo_pos) %>%
+              filter( gene_id %in% gene_list) %>%
+              mutate(gene_id = factor(gene_id, levels = gene_list)),
+                     aes(xmin = left_oligo_pos, xmax = right_oligo_pos, ymin = 0, ymax = 50), fill = 'light gray')+
+  geom_segment(data = df_read_nearest_down %>% filter(lib>0) %>% filter( gene_id %in% gene_list & min_val <500)%>%
+              mutate(gene_id = factor(gene_id, levels = gene_list)),
+               aes(x = start, xend = end, y = width, yend = width ),
+               #position = position_jitter(height = 75),
+               alpha = 0.01)+
+  geom_segment(data = df_read_nearest_up%>% filter(lib>0) %>% filter(gene_id %in% gene_list & min_val <500)%>%
+              mutate(gene_id = factor(gene_id, levels = gene_list)),
+             aes(x = start, xend = end, y = width, yend = width ),
+             #position = position_jitter(height = 75),
+             alpha = 0.01)+
+  scale_x_continuous(labels = scales::label_comma())+
+  scale_y_continuous(breaks = c(0,40,80), limits = c(0,100))+
+  labs(x = "Genomic position (bp)", y = 'Mapped read lengths (bp)')+
+  guides(fill = 'none')+
+  facet_wrap(~gene_id, scales = 'free', ncol = 1,strip.position = 'top')
+
+
+
+plot_reads
+```
+
+Update with better read plot
+
+```{r}
+df_genes <- read_delim("../../../ecoli_ORBIT_paper_final/data/seq_data/All_instances_of_Genes_in_Escherichia_coli_K-12_substr._MG1655.txt") %>% 
+  mutate(left_pos = `Left-End-Position`, right_pos = `Right-End-Position`) %>% 
+  select(-`Left-End-Position`, -`Right-End-Position`) %>% 
+  mutate(fwd = ifelse(Direction =='+', T, F))
+
+df_genes_lib <- left_join(df_TOs %>% select(lib, 'gene_id'='gene'), df_genes, by = c('gene_id'='Genes'))
+
+df_genes_lib
+```
+
+```{r}
+df_poly <- df_genes_lib %>% 
+ #filter(right_pos<20000) %>% 
+ pivot_longer(c(left_pos, right_pos), values_to = 'x_pos', names_to = 'left_right') %>% 
+ mutate( y_pos_bottom = 10,y_pos_top = 100, y_pos_center=31.623) %>% 
+ pivot_longer(c(y_pos_bottom,y_pos_top, y_pos_center), values_to = 'y_pos', names_to = 'top_bottom') %>% 
+ mutate(x_pos = ifelse(left_right == 'left_pos' & Direction == '-' & top_bottom !='y_pos_center', x_pos + 50, x_pos)) %>% 
+ mutate(x_pos = ifelse(left_right == 'right_pos' & Direction == '+' & top_bottom !='y_pos_center', x_pos - 50, x_pos)) %>% 
+ mutate(point_num = case_when(left_right == 'left_pos' & top_bottom == 'y_pos_bottom' ~ 1,
+left_right == 'left_pos' & top_bottom == 'y_pos_center' ~ 2,
+left_right == 'left_pos' & top_bottom == 'y_pos_top' ~ 3,
+left_right == 'right_pos' & top_bottom == 'y_pos_top' ~ 4,
+left_right == 'right_pos' & top_bottom == 'y_pos_center' ~ 5,
+left_right == 'right_pos' & top_bottom == 'y_pos_bottom' ~ 6)) %>% 
+ arrange(gene_id, point_num)
+
+df_poly
+```
+
+```{r}
+
+ kb_label <- function(x){
+ # from s to ns
+ lab <- paste(x / 1000)
+ }
+
+df_read_nearest_up_down_org <- df_read_nearest_up_down %>% 
+  arrange(lib, gene_id, up_down, perfect, width ) %>% 
+  group_by(lib, gene_id, up_down, perfect) %>% 
+  mutate(read_num = row_number())
+
+df_read_nearest_up_down_org
+```
+
+```{r}
+
+gene_list <- c('soxS', 'lysR','mcaS')
+
+
+plot_gene_examples <- ggplot()+
+  geom_polygon(data = df_poly %>% filter(lib >0 & gene_id %in% gene_list)%>% mutate(gene_id = factor(gene_id, levels = gene_list)), aes(x = x_pos, y = y_pos, group = gene_id),fill = 'light gray')+
+    rasterise(geom_segment(data = df_read_nearest_up_down_org %>% filter(lib >0 & gene_id %in% gene_list) %>% filter(min_val <500) %>% mutate(gene_id = factor(gene_id, levels = gene_list)),
+             aes(x = start, xend = end, y = read_num, yend = read_num, color = perfect), alpha = 0.25, linewidth = 0.5), dpi = 2000, dev = "cairo")+
+  labs(x = "Genomic position (Kb)", y = 'Read count')+
+   scale_x_continuous(labels = kb_label)+
+  scale_y_log10(limits =c(1, NA))+
+  scale_color_manual(values = c("#440154FF","#21908CFF"))+
+  guides(fill = 'none')+
+  facet_wrap(~gene_id, scales = 'free', ncol = 1,strip.position = 'top') + guides(color = 'none')
+
+plot_gene_examples
+```
+
+# Genome wide overview of lib 2
+
+```{r}
+plot_tos <- ggplot(df_TOs_found_essential_updated %>% filter(lib == 2), aes(x = left_oligo_pos, y= found_up, shape = found_up))+
+    geom_point(fill = NA, alpha = 0.5) + 
+  scale_shape_manual(values = c(13,21))+
+  scale_y_discrete(limits=c(T,F))+
+  theme_nothing()
+
+plot_hist <- ggplot(df_read_nearest_up %>% filter(lib==2) %>% mutate(perfect = ifelse(min_val ==0, T, F))) + 
+  geom_histogram(aes(x =start, fill =perfect ),binwidth=100000,color = 'black', size = 0.25) +
+  #geom_point(data = df_TOs_found_essential_updated %>% filter(found_up ==T)%>% filter(lib==2), aes(x = left_oligo_pos, y = -500), shape =21, fill = NA, alpha =0.5)+
+  #geom_point(data = df_TOs_found_essential_updated %>% filter(found_up ==F)%>% filter(lib==2), aes(x = left_oligo_pos, y = -1000 ), shape =13, fill = NA, alpha = 0.5)+
+  labs(x = "Genomic position (bp)", y = "Reads (in 100kb bin)", fill = 'Perfect match') +
+  scale_fill_manual(values = c("#440154FF","#21908CFF"))+
+  scale_x_continuous(labels = Mb_label)
+  #ylim(-500,NA)+
+  #theme(legend.position = 'bottom')
+
+# plot_jitter <- ggplot(df_read_nearest_up %>% filter(lib==2) %>% mutate(perfect = ifelse(min_val ==0, T, F)), aes(x = start, y = perfect, color = perfect)) + 
+#   rasterise(geom_jitter(alpha =0.02, shape = 3, size = 0.5, width = 0), dpi = 5000, dev = "cairo")+
+#   scale_color_manual(values = c("#440154FF","#21908CFF"))+
+#   #scale_x_continuous(labels = Mb_label)+
+#   #scale_y_discrete(labels = c('Off target reads','Perfectly matched reads'))+
+#   theme_nothing()
+
+plot_jitter <-ggplot(df_read_nearest_up %>% filter(lib==2) %>% mutate(perfect = ifelse(min_val ==0, T, F)), aes(x = start, y = perfect, color = perfect)) + 
+  rasterise(geom_text(label = '|', alpha =0.03, position = position_jitter(width = 0, height = 0.25), size = 2), dpi = 2000, dev = "cairo")+
+  scale_color_manual(values = c("#440154FF","#21908CFF"))+
+  #scale_x_continuous(labels = Mb_label)+
+  #scale_y_discrete(labels = c('Off target reads','Perfectly matched reads'))+
+  theme_nothing()
+
+#plot_tos/plot_jitter / plot_hist
+
+#plot_lib_2 <- plot_grid(plot_jitter, plot_hist, align = 'v', axis = 'lr', rel_heights = c(0.3, 1), ncol = 1)
+
+plot_lib_2 <- plot_grid(plot_tos, plot_jitter, plot_hist, align = 'v', axis = 'lr', rel_heights = c(0.2, 0.33, 1), ncol = 1)
+
+
+plot_lib_2
+```
+
+```{r}
+plot_hist_2 <- ggplot(df_read_nearest_up %>% filter(lib==2) %>% mutate(perfect = ifelse(min_val ==0, T, F))%>% mutate(perfect = factor(perfect, levels = c(T, F))), aes(x = start, fill = perfect)) + 
+  geom_histogram(binwidth = 30000) + 
+  scale_x_continuous(labels = Mb_label)+
+  scale_fill_manual(values = c("#440154FF","#21908CFF"))+
+  facet_grid(row = 'perfect', scales = 'free_y', space = 'free_y')+
+  labs(x = 'Genomic position', y = 'Reads (30 kb bins)')+guides(fill = 'none')
+
+plot_hist_2
+
+plot_tos <- ggplot(df_TOs_found_essential_updated %>% filter(lib == 2), aes(x = left_oligo_pos, y= found_up, shape = found_up))+
+    geom_point(fill = NA, alpha = 0.5) + 
+  scale_shape_manual(values = c(13,21))+
+  theme_nothing()
+
+plot_tos
+
+
+#plot_tos /plot_hist_2 
+
+plot_grid(plot_tos, plot_hist_2, align = 'hv', axis = 'lr', rel_heights = c(0.2,1), ncol = 1)
+
+
+```
+
+
+```{r}
+df_bins <- df_read_nearest_up %>% filter(lib==2) %>% 
+  mutate(perfect = ifelse(min_val==0, T, F)) %>% 
+  mutate(bin = cut(read_start_pos, seq(1, 4641628 + 20000, 20000), right = FALSE)) %>%
+  group_by(bin) %>% 
+  summarise(reads = n(), TOs_found = n_distinct(gene_id), reads_perfect = sum(perfect)) %>% 
+  mutate(frac_perfect = reads_perfect / reads, norm_reads = reads / TOs_found)
+  
+  
+  ggplot(df_bins, aes(x = bin, y = norm_reads)) + geom_point()
+  
+  ggplot(df_bins, aes(x = as.numeric(bin))) + geom_point(aes(y = frac_perfect), shape =21)
+  
+  ggplot(df_bins, aes(x = bin, y = frac_perfect)) + geom_point()
+  
+  df_bins$bin %>% as.numeric() %>% head()
+  
+  ggplot(df_bins, aes(x = as.numeric(bin), y=reads, fill = frac_perfect)) + geom_area()
+  
+ggplot(df_read_nearest_up %>% filter(lib==2) %>% mutate(perfect = ifelse(min_val ==0, T, F)), aes(x=start, fill=perfect)) +
+  geom_area(stat ="bin", bindwidth = 20000, alpha=0.6)
+
+ggplot(df_read_nearest_up %>% filter(lib==2) %>% mutate(perfect = ifelse(min_val ==0, T, F)), aes(x=start, fill=perfect)) +
+  geom_freqpoly( bindwidth = 20000, alpha=0.6)
+```
+
+# Model
+
+
+```{r}
+df_vars <- read_csv("../../data/high_throughput_experiments/to_lib_left_right_counts_TOabun_energy_vars.csv")
+
+df_vars
+```
+
+```{r}
+
+plot_n_up_down <- ggplot(df_vars %>% filter(lib >0), aes(x = factor(lib), y = n_left + n_right)) + 
+  geom_boxplot() + 
+  geom_jitter(width = 0.2, height =0, alpha = 0.1, shape =21) + 
+  scale_y_log10(limits = c(NA, NA))+
+  scale_x_discrete(labels = c('short TFs','long TFs','small RNAs')) +
+  labs(x = "Library", y = 'Perfect reads per target\n(Upstream & downstream junctions)')
+
+plot_n_up_down
+```
+
+
+```{r}
+
+df_vars %>% 
+  filter(lib == 2) %>% 
+  filter(n_right>0 & to_abun>10) %>% 
+  mutate(n_right = log(n_right, 10), to_abun = log(to_abun, 10)) %>% 
+  lm(n_right ~ to_abun, data =.) %>%
+  summary()
+
+plot_to_abun <- ggplot(df_vars %>% filter(to_abun >10 & lib==2), aes(x = to_abun, y = n_right)) +
+  geom_smooth(method = 'lm')+ 
+  geom_point(shape = 21, alpha = 0.25) +
+  #scale_x_log10() +
+  scale_y_log10()+
+  labs(x = 'Reads per oligo', y = 'Perfect reads per target', title = 'Library #2 Long TFs',subtitle = "Reads per target ~ oligo abundance (adj R2 = 0.04, p = 0.0023)")
+
+plot_to_abun
+```
+
+```{r}
+df_vars %>% 
+  filter(lib == 2) %>% 
+  filter(n_right>0) %>% 
+  mutate(n_right = log(n_right, 10)) %>% 
+  lm(n_right ~ arm_total_duplex, data =.) %>%
+  summary()
+
+plot_hom_energy <- ggplot(df_vars %>% filter(lib == 2) , aes(x = arm_total_duplex, y = n_right)) +
+  geom_smooth(method = 'lm')+ 
+  geom_point(shape = 21, alpha = 0.25) +
+  #scale_x_log10() +
+  scale_y_log10()+
+  labs(x = 'Homology arm free energy (kcal/mol)', y = 'Perfect reads per target', title = 'Library #2 Long TFs',subtitle = "Reads per target ~ homology arm free energy (adj R2 = 0.102, p = 1.64e-6)")
+
+plot_hom_energy
+```
+
+```{r}
+df_vars %>% 
+  filter(lib == 2) %>% 
+  filter(n_right>0) %>% 
+  mutate(n_right = log(n_right, 10)) %>% 
+  lm(n_right ~ ori_dist, data =.) %>%
+  summary()
+
+plot_ori_dist <- ggplot(df_vars %>% filter(lib == 2) , aes(x = ori_dist, y = n_right)) +
+  geom_smooth()+ 
+  geom_point(shape = 21, alpha = 0.25) +
+  scale_x_continuous(labels = label_comma()) +
+  scale_y_log10()+
+  labs(x = 'Distance to ori (bp)', y = 'Perfect reads per target', title = 'Library #2 Long TFs',subtitle = "smooth")
+
+plot_ori_dist
+```
+
+
+# assemble figure
+
+
+
+```{r}
+theme_set(theme_figure())
+
+plot_top <- plot_grid( plot_perfect_reads, plot_tos,NULL, 
+                      NULL, NULL, plot_essential, 
+                      align = 'hv', axis = 'lr', rel_widths = c(2,2,1), rel_heights = c(1,0.4), ncol = 3, nrow =2)
+
+save_plot("../../figures/r_pdf_figs/main_figs/fig_8_top.pdf", plot_top, base_width = 5, base_height = 3.25)
+
+plot_lib_2 <- plot_grid(plot_tos, plot_jitter, plot_hist, align = 'v', axis = 'lr', rel_heights = c(0.2, 0.33, 1), ncol = 1)
+
+#plot_lib_2
+
+#plot_middle_pdf <- plot_grid(plot_reads, plot_lib_2, align = 'hv', axis = 'lr', rel_widths = c(1,3), ncol = 2)
+plot_middle_pdf <- plot_grid(plot_gene_examples, plot_lib_2, align = 'hv', axis = 'lr', rel_widths = c(1,3), ncol = 2)
+
+save_plot("../../figures/r_pdf_figs/main_figs/fig_8_middle.pdf", plot_middle_pdf, base_width = 9, base_height = 3)
+
+plot_bottom <- plot_grid(plot_n_up_down, plot_to_abun, plot_hom_energy, plot_ori_dist, align = 'hv', axis = 'tblr', ncol = 4)
+
+save_plot("../../figures/r_pdf_figs/main_figs/fig_8_bottom.pdf", plot_bottom, base_width = 9, base_height = 2)
+
+```
+
+```{r}
+sessionInfo()
+```

@@ -1,0 +1,195 @@
+---
+title: "Figure 4: Large deletions and genomic integrations"
+subtitle: 'E. coli ORBIT 2023'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+
+# Notes
+
+This figure contains several datatypes from experiments where ORBIT was used for large genomic deletions and integrations. Data figures were made in R notebooks and exported as pdfs. Cosmetic improvements were made in Adobe Illustrator. Note that Figures 4A, 4D & 4F were made in Adobe Illustrator.
+
+----
+
+Setup packages and plotting for the notebook:
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+# Check packages
+source("../tools/package_setup.R")
+# Load packages
+library(tidyverse)
+library(cowplot)
+library(kableExtra)
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+# Load plotting tools
+source("../tools/plotting_tools.R")
+#Modify the plot theme
+theme_set(theme_notebook())
+```
+
+-----
+
+# Fig. 4B - Deletion size efficiency
+
+The galK deletions were done separately from the other loci, so let's read that data in first.
+
+```{r}
+
+df_gal_sizes <- read_csv('../../data/low_throughput_experiments/2022_11_09_galK_sizes_3_efficiency.csv') %>% #read in csv
+  mutate(eff = Kan_count / LB_count) %>% group_by(del_size) %>% mutate(avg_eff = mean(eff)) #calculate efficiency and average efficiency for replicates
+
+#calculate negative control value from galK experiment
+gal_sizes_pInt <- (df_gal_sizes %>% filter(del_size == '-'))$avg_eff[1]
+
+df_gal_sizes %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+Now we will read in the data for the other loci (hisA, metA, and leuD).
+
+```{r}
+
+df_aa_sizes <- read_csv('../../data/low_throughput_experiments/2022_09_07_AA_del_sizes_eff.csv') %>% #read in csv
+  mutate(eff = Kan_count / LB_count) %>% group_by(locus, del_size) %>% mutate(avg_eff = mean(eff)) #calculate efficiency and average efficiency for replicates
+
+df_aa_sizes %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+
+```{r}
+
+#combine datasets
+df_gal_aa_sizes <- bind_rows(df_gal_sizes %>% filter(del_size!='-') %>% mutate(del_size = as.numeric(del_size)), 
+                             df_aa_sizes %>% filter(locus!='galK')
+                             ) %>% 
+  mutate(locus = factor(locus, levels = c( 'galK','hisA','metA','leuD')))
+
+#Plot with individual datapoints, and mean points connected by lines
+plot_gal_aa_sizes <- ggplot(df_gal_aa_sizes, aes(x = del_size, y = eff, color = locus)) + 
+  geom_hline(yintercept = gal_sizes_pInt, linetype = 2, color = 'light gray')+
+  geom_jitter(shape = 21, width = 0.05, height = 0, alpha = 0.4) + 
+  geom_point(data = . %>% filter(replicate==1), aes(y = avg_eff)) + 
+  geom_line(data = . %>% filter(replicate==1), aes(y = avg_eff)) + 
+  scale_y_log10(labels = scales::label_percent(accuracy = 0.01)) + 
+  scale_x_log10(breaks = c(100, 1000, 10000, 50000), labels = c('100 bp', '1 kb', '10 kb', '50 kb'))+
+  labs(y = 'Efficiency', x = 'Deletion Size')+
+  scale_color_viridis_d()
+
+plot_gal_aa_sizes
+
+```
+
+# Fig. 4C - Deletion size accuracy
+
+Again galK was done separately from the other loci, so let's read in that data first:
+
+```{r}
+df_galK_pin <- read_csv("../../data/low_throughput_experiments/2022_11_09_galK_sizes_3_accuracy.csv") %>% 
+  mutate(accuracy = 1-(selective_colonies / permissive_colonies)) %>% 
+  group_by(locus, deletion_size) %>% 
+  mutate(avg_accuracy = mean(accuracy))
+
+df_galK_pin
+```
+
+Then we will read in the data for hisA, metA and leuD:
+
+```{r}
+df_aa_pin <- read_csv("../../data/low_throughput_experiments/2022_09_07_AA_sizes_pin_plate_count.csv") %>% 
+  mutate(accuracy = 1-(selective_colonies / permissive_colonies)) %>% 
+  group_by(locus, deletion_size) %>% 
+  mutate(avg_accuracy = mean(accuracy)) %>% 
+  mutate(locus = factor(locus, levels = c('hisA','metA','leuD')))
+
+df_aa_pin
+```
+
+We will combine the data and plot:
+
+
+```{r}
+
+#Combine data
+df_galK_aa_pin <- bind_rows(df_galK_pin %>% filter(condition != 'pInt_only') %>% mutate(deletion_size = as.numeric(deletion_size)), df_aa_pin)
+
+#Get background values
+galK_bg <- (df_galK_pin %>% filter(condition == 'pInt_only' & replicate == 1))$avg_accuracy
+
+#Plot with individual datapoints, and mean points connected by lines
+plot_del_accuracy <- ggplot(df_galK_aa_pin, aes(x = deletion_size, y = accuracy, color = locus)) + 
+  geom_hline(yintercept = 0, linetype = 2, color = 'light gray')+ #background accuracy for AA loci was 0.
+    geom_hline(yintercept = galK_bg, linetype = 4, color = 'light gray')+ #background accuracy for galK is shown separately here.
+  geom_line(data = . %>% filter(replicate==1), aes(y = avg_accuracy)) + 
+  geom_jitter(shape = 21, width = 0.05, height = 0, alpha = 0.4) + 
+  geom_point(data = . %>% filter(replicate==1), aes(y = avg_accuracy)) + 
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1), limits = c(0,1)) + 
+  scale_x_log10(breaks = c(100, 1000, 10000, 50000), labels = c('100 bp', '1 kb', '10 kb', '50 kb'))+
+  labs(y = 'Phenotypic accuracy', x = 'Deletion Size')+
+  scale_color_viridis_d()
+
+plot_del_accuracy
+```
+
+# Fig. 4E - Integrating plasmid size efficiency (violacein operon)
+
+For this experiment different sized fragments from the luxR inducible violacein operon were cloned into an integrating plasmid. Efficiency was measured for each plasmid with the ∆galK TO. Let's read in the data:
+
+```{r}
+df_vio <- read_csv("../../data/low_throughput_experiments/2022_10_25_pInt_vio_sizes.csv") %>% 
+  mutate(eff = Kan_count / LB_count) %>% 
+  group_by(condition, to, plasmid_size) %>% mutate(avg_eff = mean(eff)) #calculate efficiency and average efficiency for replicates
+
+df_vio %>% kable() %>% kable_styling() %>% scroll_box(height = '250px')
+
+```
+
+Now let's plot:
+
+```{r}
+
+plot_vio <- ggplot(df_vio%>% filter(to != 'control'), aes(x = plasmid_size, y = eff)) + 
+  geom_jitter(shape = 21, width = 200, height = 0, color = "#440154FF", alpha = 0.4) + 
+  geom_jitter(data = df_vio %>% filter(to == 'control'), shape = 4, width = 0, height = 0, color = 'light gray') + #negative control efficiencies for pInt_vioA-C and pInt_luxR_vioA-E are shown here
+  geom_point(data = . %>% filter(replicate ==1), aes(y = avg_eff), color = "#440154FF") + 
+  geom_line(data = . %>% filter(replicate ==1), aes(y = avg_eff, group = to), color = "#440154FF") + 
+  scale_y_log10(limits = c(NA,0.001), labels = scales::label_percent(accuracy = 0.001))+
+  scale_x_continuous(breaks = c(2000, 6000, 10000), labels = c('2 kb', '6 kb', '10 kb'))+
+  labs(x = 'Integrating plasmid size', y = 'Efficiency')
+
+plot_vio
+```
+
+# Create Fig. 4
+
+```{r}
+theme_set(theme_figure())
+
+fig_4_sizes <- plot_grid(plot_gal_aa_sizes + guides(color = 'none'), plot_vio, nrow = 1,
+                   align = 'hv', axis = 'lr', scale = 1,
+                   labels = c('B','E'))
+
+fig_4_sizes <- plot_grid(plot_gal_aa_sizes + guides(color = 'none'),plot_del_accuracy + guides(color = 'none'), 
+                         plot_vio,NULL,
+                         nrow = 2, ncol = 2,
+                   align = 'hv', axis = 'lr', scale = 1,
+                   labels = c('B','C','E'))
+
+fig_4_sizes
+
+save_plot("../../figures/r_pdf_figs/main_figs/fig_4_del_int_sizes.pdf", fig_4_sizes, base_width = 5, base_height = 4)
+```
+
+
+```{r}
+
+sessionInfo()
+
+```

@@ -1,0 +1,13 @@
+﻿locus,replicate,permissive_colonies,selective_colonies
+galK,1,14,0
+galK,2,14,0
+galK,3,14,0
+hisA,1,12,0
+hisA,2,14,0
+hisA,3,14,0
+metA,1,14,0
+metA,2,14,0
+metA,3,14,0
+leuD,1,14,0
+leuD,2,14,1
+leuD,3,14,0
