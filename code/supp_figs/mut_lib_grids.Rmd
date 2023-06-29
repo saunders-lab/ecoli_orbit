@@ -58,13 +58,13 @@ df_read_nearest_up_down_org
 ```
 
 ```{r}
-df_TOs <- read_csv("../../../ecoli_ORBIT_paper_final/data/seq_data/right_side_TO_libs/df_TOs.csv")
+df_TOs <- read_csv("../../data/seq_data/right_side_TO_libs/df_TOs.csv")
 df_TOs
 
 ```
 
 ```{r}
-df_genes <- read_delim("../../../ecoli_ORBIT_paper_final/data/seq_data/All_instances_of_Genes_in_Escherichia_coli_K-12_substr._MG1655.txt") %>% 
+df_genes <- read_delim("../../data/seq_data/All_instances_of_Genes_in_Escherichia_coli_K-12_substr._MG1655.txt") %>% 
   mutate(left_pos = `Left-End-Position`, right_pos = `Right-End-Position`) %>% 
   select(-`Left-End-Position`, -`Right-End-Position`) %>% 
   mutate(fwd = ifelse(Direction =='+', T, F))
@@ -133,7 +133,7 @@ plot_all <- ggplot()+
 
 ```
 
-# Fig. SX - IDT oPool
+# Fig. S11 - IDT oPool
 
 ```{r}
 plot_lib_0 <- ggplot()+
@@ -148,11 +148,11 @@ plot_lib_0 <- ggplot()+
 
 plot_lib_0
 
-save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_0.pdf",plot_lib_0, base_height = 4, base_width = 8)
+#save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_0.pdf",plot_lib_0, base_height = 4, base_width = 8)
 ```
 
 
-# Fig. SX - Lib #1 - short TFs
+# Fig. S13 - Lib #1 - short TFs
 
 ```{r}
 plot_lib_1 <- ggplot()+
@@ -167,28 +167,32 @@ plot_lib_1 <- ggplot()+
 
 plot_lib_1
 
-save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_1.pdf",plot_lib_1, base_height = 10, base_width = 8)
+#save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_1.pdf",plot_lib_1, base_height = 10, base_width = 8)
 ```
 
-# Fig. SX - Lib #2 - long TFs
+# Fig. S14 - Lib #2 - long TFs
+
+Note this plot is so large, that the Rmd notebook seems to have trouble displaying it, however the pdf output works fine.
 
 ```{r}
 plot_lib_2 <- ggplot()+
   geom_polygon(data = df_poly %>% filter(lib == 2), aes(x = x_pos, y = y_pos, group = gene_id),fill = 'light gray')+
-  rasterise(geom_segment(data = df_read_nearest_up_down_org%>% filter(lib == 2) %>% filter(min_val <500),
-             aes(x = start, xend = end, y = read_num, yend = read_num, color = perfect), alpha = 0.25, linewidth = 0.5), dpi = 2000, dev = "cairo")+
+  rasterise(
+  geom_segment(data = df_read_nearest_up_down_org%>% filter(lib == 2) %>% filter(min_val <500),
+             aes(x = start, xend = end, y = read_num, yend = read_num, color = perfect), alpha = 0.25, linewidth = 0.5), 
+  dpi = 2000, dev = "cairo")+
   labs(x = "Genomic position (Kb)", y = 'Read_count')+
-   scale_x_continuous(labels = kb_label,breaks = scales::extended_breaks(n=3))+
+  scale_x_continuous(labels = kb_label,breaks = scales::extended_breaks(n=3))+
   scale_y_log10(limits =c(1, NA))+
   guides(fill = 'none')+
   facet_wrap(~gene_id, scales = 'free', ncol = 8,strip.position = 'top') + guides(color = 'none')
 
-plot_lib_2
+#plot_lib_2
 
-save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_2.pdf",plot_lib_2, base_height = 20, base_width = 8)
+#save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_2.pdf",plot_lib_2, base_height = 20, base_width = 8)
 ```
 
-# Fig. SX - Lib #3 - sRNAs
+# Fig. S15 - Lib #3 - sRNAs
 
 ```{r}
 plot_lib_3 <- ggplot()+
@@ -203,36 +207,10 @@ plot_lib_3 <- ggplot()+
 
 plot_lib_3
 
-save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_3.pdf",plot_lib_3, base_height = 10, base_width = 8)
+#save_plot("../../figures/r_pdf_figs/supp_figs/plot_lib_3.pdf",plot_lib_3, base_height = 10, base_width = 8)
 ```
 
 
 ```{r}
-
-
-
-
-
-
-
-
-plot_poly <- ggplot(df_poly %>% filter(x_pos > g_left_pos-2000 & x_pos < g_right_pos+2000), 
- aes(x = x_pos, y = y_pos, label = Genes, group = Genes)) + 
- geom_hline(yintercept = 1, size = 1)+
- geom_segment(x = TO_left_pos, xend = TO_left_pos, y = 0.75, yend = 1, size = 0.5, color = 'light gray')+
- geom_segment(x = TO_right_pos, xend = TO_right_pos, y = 0.75, yend = 1, size = 0.5, color = 'light gray')+
- geom_label_repel(data = . %>% distinct(Genes, center_pos),aes(x = center_pos, y = 1),
-box.padding = 0.5,min.segment.length=0,size = 3, ylim = c(1.05, NA), 
-direction = 'y', segment.size = 0.25, segment.linetype = 1, segment.color = 'light gray')+
- geom_polygon_interactive(aes(tooltip = long_tooltip, data_id = Genes),
-fill = 'light gray', color = 'black', rule = 'winding', size = 0.5) + 
- geom_segment(x = TO_left_pos, xend = TO_right_pos, y = 0.75, yend = 0.75, linetype = 2, color = '#D55E00')+
- geom_segment(x = TO_left_pos, xend = TO_right_pos, y = 0.75, yend = 0.75, linetype = 2, color = '#D55E00')+
- geom_segment(x = TO_left_pos, xend = TO_left_pos-41, y = 0.75, yend = 0.75, linetype = 1, color = '#E69F00')+
- geom_segment(x = TO_right_pos, xend = TO_right_pos + 41, y = 0.75, yend = 0.75, linetype = 1, color = '#56B4E9')+
- geom_point(x = TO_left_pos, y = 0.75, size = 3, shape = 21, fill = '#E69F00')+
- geom_point(x = TO_right_pos, y = 0.75, size = 3, shape = 21, fill = '#56B4E9')+
- labs(x = 'Genomic position (kb)', y = NULL) + 
- scale_x_continuous(labels = kb_label) + ylim(0.5,1.5) + coord_cartesian(xlim = c(g_left_pos-500, g_right_pos + 500)) + 
- theme(axis.text.y = element_blank(), panel.grid = element_blank(), axis.ticks.y = element_blank())
+sessionInfo()
 ```

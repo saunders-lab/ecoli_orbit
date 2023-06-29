@@ -17,7 +17,7 @@ output:
 
 *-Scott Saunders, Distinguished Fellow, UTSW Medical Center*
 
-[bioRxiv preprint]()   \|   [github repository](github.com/saunders-lab/ecoli_orbit)   \| [Saunders lab ORBIT help page](https://saunders-lab.github.io/ecoli_orbit/)   \|   [Targeting oligo design app](https://saunders-lab.shinyapps.io/ORBIT_TO_design_ecMG1655/)
+[bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2023.06.28.546561v1)   \|   [github repository](github.com/saunders-lab/ecoli_orbit)   \| [Saunders lab ORBIT help page](https://saunderslab.org/research/ec_orbit/)   \|   [Targeting oligo design app](https://saunders-lab.shinyapps.io/ORBIT_TO_design_ecMG1655/)
 
 </center>
 
@@ -47,21 +47,75 @@ Microbiology and synthetic biology depend on reverse genetic approaches to manip
 
 -   [Figure 7. Barcoded and multi-locus mutant libraries.](https://saunders-lab.github.io/ecoli_orbit/code/main_figs/fig_7_BC_oPool.html)
 
--   [Figure 8. High throughput knockout libraries for transcription factor and small RNA genes.](TBD)
+-   [Figure 8. High throughput knockout libraries for transcription factor and small RNA genes.](TBD) link TBD
 
 ## Supplemental figures
 
--   [Figure S1.]()
+-   Figure S1. Target oligo design principles and web app. (No computational content)
 
--   [Figure S2.]()
+-   [Figure S2. Commercial oligo parameters and pricing.](https://saunders-lab.github.io/ecoli_orbit/code/supp_figs/supplement_protocol_optimization.html)
+
+-   Figure S3. Troubleshooting attB only colonies. (No computational content)
+
+-   Figure S4. Single gene deletion accuracy and stability. (No computational content)
+
+-   [Figure S5. Helper plasmid efficiency and off target SNP mutation rate.](https://saunders-lab.github.io/ecoli_orbit/code/supp_figs/supp_mutation_rate.html)
+
+-   Figure S6. Variable deletion size phenotypic accuracy. (No computational content)
+
+-   Figure S7. Sanger sequence confirmation of *galK* deletions of various sizes. (No computational content)
+
+-   Figure S8. Sanger sequence confirmation of *hisA, metA* and *leuD* deletions of various sizes. (No computational content)
+
+-   Figure S9. Phenotypic accuracy of orthogonal and untargeted double mutants. (No computational content)
+
+-   [Figure S10. Orthogonal att sites and triple mutant construction.]
+
+-   [Figure S11. oPool library - Upstream and downstream reads for target loci.](https://saunders-lab.github.io/ecoli_orbit/code/supp_figs/mut_lib_grids.html)
+
+-   Figure S12. Low abundance (Twist Biosciences) targeting oligo library processing. (No computational content)
+
+-   [Figure S13. Short transcription factor library - Upstream and downstream reads for target loci.](https://saunders-lab.github.io/ecoli_orbit/code/supp_figs/mut_lib_grids.html)
+
+-   [Figure S14. Long transcription factor deletion library - Upstream and downstream reads for target loci.](https://saunders-lab.github.io/ecoli_orbit/code/supp_figs/mut_lib_grids.html)
+
+-   [Figure S15. Small RNA deletion library - Upstream and downstream reads for target loci.](https://saunders-lab.github.io/ecoli_orbit/code/supp_figs/mut_lib_grids.html)
+
+-   [Figure S16. Explaining mutant library abundances.](https://saunders-lab.github.io/ecoli_orbit/code/supp_figs/supp_twist_lib.html)
+
+-   [Figure S17. Correlations of oligo parameters and observed reads per target (perfect reads).](https://saunders-lab.github.io/ecoli_orbit/code/supp_figs/supp_twist_lib.html)
 
 ## Sequencing data
 
 ### galK BC
 
+-   [galK random genomic barcodes - sequencing data analysis.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/galK_BC_16N/galK_BC_16N_processing_analysis.html)
+
+### Twist oligo design
+
+-   [Twist oligo pool design - Transcription factors](https://saunders-lab.github.io/ecoli_orbit/code/twist_oligo_design/twist_orbit_TF_deletion.html)
+
+-   [Twist oligo pool design - Small RNAs](https://saunders-lab.github.io/ecoli_orbit/code/twist_oligo_design/twist_orbit_small_RNA_deletion.html)
+
+-   [Twist oligo pool design - Primers and cloning scheme](https://saunders-lab.github.io/ecoli_orbit/code/twist_oligo_design/twist_orbit_cloning_scheme.html)
+
 ### IDT oPool / Twist mutant library characterization
 
+-   [Mutant libraries - Junction #1 sequencing data processing.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/left_side_TO_libs_processing.html)
+
+-   [Mutant libraries - Junction #2 sequencing data processing.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/right_side_TO_libs_processing.html)
+
+-   [Mutant libraries - Junction #1 analysis.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/left_side_TO_libs_analysis.html)
+
+-   [Mutant libraries - Junction #2 analysis.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/right_side_TO_libs_analysis.html)
+
+-   [Mutant libraries - Combined junction 1 & 2 analysis.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/upstream_downstream_combined_analysis.html)
+
 ### Twist TO abundance
+
+-   [Twist TO abundance - Sequencing data processing.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/TO_abundance/TO_abundance_processing.html)
+
+-   [Twist TO abundance - Analysis.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/TO_abundance/TO_abundance_analysis.html)
 
 # Other resources
 
@@ -69,6 +123,17 @@ Microbiology and synthetic biology depend on reverse genetic approaches to manip
 
 ## Protocols
 
+-   [Saunders lab ORBIT protocols.](saunderslab.org/research/ec_orbit/protocols)
+
 ## DNA maps
 
+-   [Plasmid maps](https://github.com/saunders-lab/ecoli_orbit/tree/main/data/DNA_maps/plasmids)
+
+-   [Genomic loci](https://github.com/saunders-lab/ecoli_orbit/tree/main/data/DNA_maps/genomic_loci)
+
+-   [Sequencing libraries](https://github.com/saunders-lab/ecoli_orbit/tree/main/data/DNA_maps/sequencing_libraries)
+
+
 ## Addgene plasmids
+
+-   [Addgene page.](TBD) link TBD

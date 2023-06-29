@@ -21,7 +21,7 @@ Setup packages and plotting for the notebook:
 
 ```{r setup, echo=T, message=FALSE, warning=FALSE}
 # Check packages
-source("../package_setup.R")
+source("../tools/package_setup.R")
 # Load packages
 library(tidyverse)
 library(cowplot)
@@ -29,7 +29,7 @@ library(kableExtra)
 # Code display options
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
 # Load plotting tools
-source("../plotting_tools.R")
+source("../tools/plotting_tools.R")
 #Modify the plot theme
 theme_set(theme_notebook())
 ```
@@ -43,7 +43,7 @@ Read in the data.
 ```{r}
 
 
-df_po <- read_csv("../../data/2022_09_15_PO_bonds_orbit.csv") %>% mutate(eff = Kan_count / LB_count)
+df_po <- read_csv("../../data/low_throughput_experiments/2022_09_15_PO_bonds_orbit.csv") %>% mutate(eff = Kan_count / LB_count)
 
 
 df_po
@@ -66,7 +66,7 @@ plot_po
 ```
 
 ```{r}
-df_pur <- read_csv("../../data/2022_09_07_TO_purification.csv") %>% mutate(eff = Kan_count / LB_count) %>% 
+df_pur <- read_csv("../../data/low_throughput_experiments/2022_09_07_TO_purification.csv") %>% mutate(eff = Kan_count / LB_count) %>% 
   mutate(purification = factor(purification, levels  = c('desalt','cartridge','HPLC','PAGE','control')))
 
 df_pur
@@ -89,7 +89,7 @@ plot_pur
 ```
 
 ```{r}
-df_co <- read_csv("../../data/2022_10_10_oligo_supplier.csv") %>% mutate(eff = Kan_count / LB_count)  %>% 
+df_co <- read_csv("../../data/low_throughput_experiments/2022_10_10_oligo_supplier.csv") %>% mutate(eff = Kan_count / LB_count)  %>% 
   mutate(locus = factor(locus, levels  = c('galK','hisA','metA','leuD'))) %>% 
   group_by(supplier, locus) %>% 
   mutate(avg_eff = mean(eff))
@@ -123,7 +123,7 @@ supp_protocol <- plot_grid(plot_po, plot_pur, plot_co + guides(color = 'none'), 
 
 supp_protocol
 
-save_plot("../../figures/supplement/supp_protocol_optimization.pdf", plot = supp_protocol, base_height = 3, base_width = 7)
+#save_plot("../../figures/r_pdf_figs/supp_figs/supp_protocol_optimization.pdf", plot = supp_protocol, base_height = 3, base_width = 7)
 ```
 
 

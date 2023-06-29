@@ -233,12 +233,6 @@ plot_fixed_eff
 ```{r}
 theme_set(theme_figure())
 
-fig_mut_vars <- plot_grid(plot_eff_2, plot_muts,plot_fixed_eff, ncol = 1,
-                   align = 'hv', axis = 'lr', scale = 0.9,
-                   labels = c('B','C','D'))
-
-fig_mut_vars
-save_plot("../../figures/r_pdf_figs/supp_figs/supp_mut_rate_vars.pdf", fig_mut_vars, base_width = 5, base_height = 9)
 
 fig_mut_vars <- plot_grid(NULL,plot_eff_2,plot_muts, plot_locus_snps + guides(fill = 'none'), plot_fixed_eff,NULL, ncol = 2,rel_widths = c(2,3),
                    align = 'hv', axis = 'lr', scale = 1,
@@ -247,7 +241,7 @@ fig_mut_vars <- plot_grid(NULL,plot_eff_2,plot_muts, plot_locus_snps + guides(fi
 
 fig_mut_vars
 
-save_plot("../../figures/r_pdf_figs/supp_figs/supp_mut_rate_vars.pdf", fig_mut_vars, base_width = 7, base_height = 9)
+#save_plot("../../figures/r_pdf_figs/supp_figs/supp_mut_rate_vars.pdf", fig_mut_vars, base_width = 7, base_height = 9)
 
 ```
 
