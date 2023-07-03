@@ -10,6 +10,16 @@ output:
     toc: yes
 ---
 
+The raw sequencing data is available on the SRA and is associated with this [BioProject](https://www.ncbi.nlm.nih.gov/sra/PRJNA989253).
+
+|   Library Name   |                             Run ID and Link                              | Size  |
+|:--------------:|:-------------------------------------:|:--------------:|
+| short_TF_oligos  | [SRR25076297](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076297) | 45 Mb |
+|  long_TF_oligos  | [SRR25076306](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076306) | 27 Mb |
+| small_RNA_oligos | [SRR25076305](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076305) | 42 Mb |
+
+------------------------------------------------------------------------
+
 This notebook does fastp quality filtering on raw data for the TO abundance raw sequencing data.
 
 ```{bash}
@@ -39,4 +49,3 @@ fastq_to_fasta -i "../../../data/seq_data/twist_TO_abundance/fastp_processed/twi
 fastq_to_fasta -i "../../../data/seq_data/twist_TO_abundance/fastp_processed/twist_lib_3_fastp.fastq" -o "../../../data/seq_data/twist_TO_abundance/fastp_processed/lib_3_TOs.fasta"
 
 ```
-

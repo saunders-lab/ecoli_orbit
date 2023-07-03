@@ -12,6 +12,10 @@ Microbiology and synthetic biology depend on reverse genetic approaches to manip
 
 ## Resources
 
+-   [bioRxiv preprint](https://www.biorxiv.org/content/10.1101/2023.06.28.546561v1)
+
+-   [Paper website](https://saunders-lab.github.io/ecoli_orbit/) (static html code notebooks)
+
 -   [Targeting oligo design app](https://saunders-lab.shinyapps.io/ORBIT_TO_design_ecMG1655/)
 
 -   [Saunders lab ORBIT help page](saunderslab.org/research/ec_orbit)
@@ -127,3 +131,22 @@ This folder contains the code notebooks used to process and analyze the data.
 ### `/figures`
 
 This folder contains pdfs output from R containing preliminary figures. Final figures were made in illustrator.
+
+## SRA raw sequencing data
+
+-   [BioProject](https://www.ncbi.nlm.nih.gov/sra/PRJNA989253)
+
+| Experiment                                 |   Library Name   |                             Run ID and Link                              |  Size  |
+|--------------------------------------------|:----------------:|:------------------------------------------------------------------------:|:------:|
+| galK barcodes                              |    galK_BC16N    | [SRR25076308](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076308) | 123 Mb |
+| IDT oPool - left junction                  |     oPool_J1     | [SRR25076307](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076307) | 8.3 Mb |
+| Twist short TF deletions - left junction   |   short_TF_J1    | [SRR25076303](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076303) | 25 Mb  |
+| Twist long TF deletions - left junction    |    long_TF_J1    | [SRR25076301](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076301) | 16 Mb  |
+| Twist small RNA deletions - left junction  |   small_RNA_J1   | [SRR25076299](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076299) | 18 Mb  |
+| IDT oPool - right junction                 |     oPool_J2     | [SRR25076304](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076304) | 15 Mb  |
+| Twist short TF deletions - right junction  |   short_TF_J2    | [SRR25076302](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076302) | 43 Mb  |
+| Twist long TF deletions - right junction   |    long_TF_J2    | [SRR25076300](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076300) | 39 Mb  |
+| Twist small RNA deletions - right junction |   small_RNA_J2   | [SRR25076298](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076298) | 30 Mb  |
+| Twist short TF oligo abundance             | short_TF_oligos  | [SRR25076297](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076297) | 45 Mb  |
+| Twist long TF oligo abundance              |  long_TF_oligos  | [SRR25076306](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076306) | 27 Mb  |
+| Twist small RNA oligo abundance            | small_RNA_oligos | [SRR25076305](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076305) | 42 Mb  |

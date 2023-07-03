@@ -21,7 +21,18 @@ source("../tools/plotting_tools.R")
 theme_set(theme_notebook())
 ```
 
-This notebook is nearly identical to `right_side_TO_libs_processing.Rmd`, it just uses the right side sequencing data instead.
+The raw sequencing data is available on the SRA and is associated with this [BioProject](https://www.ncbi.nlm.nih.gov/sra/PRJNA989253).
+
+| Library Name |                             Run ID and Link                              | Size  |
+|:-------------:|:-----------------------------------------:|:-------------:|
+|   oPool_J2   | [SRR25076304](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076304) | 15 Mb |
+| short_TF_J2  | [SRR25076302](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076302) | 43 Mb |
+|  long_TF_J2  | [SRR25076300](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076300) | 39 Mb |
+| small_RNA_J2 | [SRR25076298](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076298) | 30 Mb |
+
+------------------------------------------------------------------------
+
+This notebook is nearly identical to `left_side_TO_libs_processing.Rmd`, it just uses the right side sequencing data instead.
 
 Four different ORBIT mutant libraries were constructed using targeting oligo pools. These different deletion libraries were as follows:
 
@@ -39,21 +50,23 @@ The structure of this data processing is shown below. This processing script liv
 
 After all this, we will convert these various sets of reads into bam files and then into a more usable form for analysis - the final dataframe: `df_to_libs_right_all_reads.csv`
 
-    ├── code
-    │   ├── seq_data_processing
-    │   │   ├── right_side_TO_libs_processing.Rmd
-    ├── data
-    │   ├── seq_data
-    │   │   ├── right_side_TO_libs
-    │   │   │   ├── 0_raw_fastq
-    │   │   │   ├── 1_fastp_output
-    │   │   │   ├── 2_cutadapt_output
-    │   │   │   ├── 3_bowtie_ecoli_output
-    │   │   │   ├── 4_bowtie_pInt_output
-    │   │   │   ├── 5_bowtie_phiX_output
-    │   │   │   ├── 6_bam_files
-    │   │   │   ├── df_to_libs_right_all_reads.csv
-    ├── figures
+```         
+├── code
+│   ├── seq_data_processing
+│   │   ├── right_side_TO_libs_processing.Rmd
+├── data
+│   ├── seq_data
+│   │   ├── right_side_TO_libs
+│   │   │   ├── 0_raw_fastq
+│   │   │   ├── 1_fastp_output
+│   │   │   ├── 2_cutadapt_output
+│   │   │   ├── 3_bowtie_ecoli_output
+│   │   │   ├── 4_bowtie_pInt_output
+│   │   │   ├── 5_bowtie_phiX_output
+│   │   │   ├── 6_bam_files
+│   │   │   ├── df_to_libs_right_all_reads.csv
+├── figures
+```
 
 # Step 0: Bioinformatics environment setup
 

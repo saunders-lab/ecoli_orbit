@@ -1,0 +1,62 @@
+LOCUS       pInt_attP1_chlorR       1923 bp ds-DNA     circular     03-JUL-2023
+DEFINITION  .
+FEATURES             Location/Qualifiers
+     misc_feature    1..48
+                     /label="bxb1_attP"
+     misc_feature    24..25
+                     /label="central_di_nt"
+     misc_feature    49..68
+                     /label="Spacer"
+     misc_feature    complement(69..116)
+                     /label="FRT"
+     primer          complement(212..233)
+                     /label="pInt_seq_rev"
+                     /note="sequence: cccagtagctgacattcatccg"
+     gene            478..1137
+                     /label="cat"
+     misc_feature    1167..1213
+                     /label="voigt_ter_L3S3P11"
+     rep_origin      1423..1846
+                     /label="R6K gamma replication origin"
+     primer          1491..1512
+                     /label="pInt_seq_fwd"
+                     /note="sequence: gcgttacatccctggcttgttg"
+     misc_feature    complement(1858..1903)
+                     /label="FRT"
+     misc_feature    1904..1923
+                     /label="Spacer"
+ORIGIN
+        1 ggtttgtctg gtcaaccacc gcggtctcag tggtgtacgg tacaaaccgt gtaggctgga
+       61 gctgcttcga agttcctata ctttctagag aataggaact tcggaatagg aacttcaaga
+      121 tcccccacgc tgccgcaagc actcagggcg caagggctgc taaaggaagc ggaacacgta
+      181 gaaagccagt ccgcagaaac ggtgctgacc ccggatgaat gtcagctact gggctatctg
+      241 gacaagggaa aacgcaagcg caaagagaaa gcaggtaTAC CTGTGACGGA AGATCACTTC
+      301 GCAGAATAAA TAAATCCTGG TGTCCCTGTT GATACCGGGA AGCCCTGGGC CAACTTTTGG
+      361 CGAAAATGAG ACGTTGATCG GCACGTAAGA GGTTCCAACT TTCACCATAA TGAAATAAGA
+      421 TCACTACCGG GCGTATTTTT TGAGTTATCG AGATTTTCAG GAGCTAAGGA AGCTAAAATG
+      481 GAGAAAAAAA TCACTGGATA TACCACCGTT GATATATCCC AATGGCATCG TAAAGAACAT
+      541 TTTGAGGCAT TTCAGTCAGT TGCTCAATGT ACCTATAACC AGACCGTTCA GCTGGATATT
+      601 ACGGCCTTTT TAAAGACCGT AAAGAAAAAT AAGCACAAGT TTTATCCGGC CTTTATTCAC
+      661 ATTCTTGCCC GCCTGATGAA TGCTCATCCG GAATTCCGTA TGGCAATGAA AGACGGTGAG
+      721 CTGGTGATAT GGGATAGTGT TCACCCTTGT TACACCGTTT TCCATGAGCA AACTGAAACG
+      781 TTTTCATCGC TCTGGAGTGA ATACCACGAC GATTTCCGGC AGTTTCTACA CATATATTCG
+      841 CAAGATGTGG CGTGTTACGG TGAAAACCTG GCCTATTTCC CTAAAGGGTT TATTGAGAAT
+      901 ATGTTTTTCG TCTCAGCCAA TCCCTGGGTG AGTTTCACCA GTTTTGATTT AAACGTGGCC
+      961 AATATGGACA ACTTCTTCGC CCCCGTTTTC ACCATGGGCA AATATTATAC GCAAGGCGAC
+     1021 AAGGTGCTGA TGCCGCTGGC GATTCAGGTT CATCATGCCG TTTGTGATGG CTTCCATGTC
+     1081 GGCAGAATGC TTAATGAATT ACAACAGTAC TGCGATGAGT GGCAGGGCGG GGCGTAATTT
+     1141 TTTTAAGGCA GTTATTGGTG CCCTTACCAA TTATTGAACA CCCTTCGGGG TGTTTTTTTG
+     1201 TTTCTGGTCT CCCttcgaaa tgaccgacca agcgacgccc aacctgccat cacgagattt
+     1261 cgattccacc gccgccttct atgaaaggtt gggcttcgga atcgttttcc gggacgccgg
+     1321 ctggatgatc ctccagcgcg gggatctcat gctggagttc ttcgcccacc ccagcttcaa
+     1381 aagcgctcta aggaggatat tcatatggac catggctaat tcccatgtca gccgttaagt
+     1441 gttcctgtgt cactcaaaat tgctttgaga ggctctaagg gcttctcagt gcgttacatc
+     1501 cctggcttgt tgtccacaac cgttaaacct taaaagcttt aaaagcctta tatattcttt
+     1561 tttttcttat aaaacttaaa accttagagg ctatttaagt tgctgattta tattaatttt
+     1621 attgttcaaa catgagagct tagtacgtga aacatgagag cttagtacgt tagccatgag
+     1681 agcttagtac gttagccatg agggtttagt tcgttaaaca tgagagctta gtacgttaaa
+     1741 catgagagct tagtacgtga aacatgagag cttagtacgt actatcaaca ggttgaactg
+     1801 ctgatcttca gatcctctac gccggacgca tcgtggccgg atcttgcggc cgcaaaagaa
+     1861 gttcctatac tttctagaga ataggaactt cggaatagga actattacac gtcttgagcg
+     1921 att
+//

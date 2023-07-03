@@ -10,12 +10,17 @@ output:
     toc: yes
 ---
 
-
 # Notes
 
-This notebook walks through the initial processing and analysis for the 16N barcodes placed at the galK locus. The structure of the amplicon library is available at `data/DNA_maps/sequencing_libraries/galk_BC16N_orbit_seq_library.gb`  The expected read length is exactly 189 bp with unique barcodes flanked by identical genomic and pInt sequences.
+This notebook walks through the initial processing and analysis for the 16N barcodes placed at the galK locus. The structure of the amplicon library is available at `data/DNA_maps/sequencing_libraries/galk_BC16N_orbit_seq_library.gb` The expected read length is exactly 189 bp with unique barcodes flanked by identical genomic and pInt sequences.
 
-----
+The raw sequencing data is available on the SRA and is associated with this [BioProject](https://www.ncbi.nlm.nih.gov/sra/PRJNA989253).
+
+| Library Name |                             Run ID and Link                              |  Size  |
+|:------------:|:------------------------------------------------------------------------:|:------:|
+|  galK_BC16N  | [SRR25076308](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076308) | 123 Mb |
+
+------------------------------------------------------------------------
 
 Setup packages and plotting for the notebook:
 
@@ -37,7 +42,7 @@ source("../../tools/plotting_tools.R")
 theme_set(theme_notebook())
 ```
 
------
+------------------------------------------------------------------------
 
 # Processing
 
@@ -59,12 +64,11 @@ df_full %>% head()  %>%
 
 ```
 
-
 Note that this library was run with 10% phiX, but the library index was not read, so these raw reads include both our galKBC16N amplicon product and phiX.
 
 # Analysis
 
-Reads are expected to be 189 length. Let's check. 
+Reads are expected to be 189 length. Let's check.
 
 ## Read length
 
@@ -120,7 +124,7 @@ df_full_check %>%
 
 ```
 
-So, we can see that ~92% of the reads are perfect, meaning that they have all four flanking sequences. Perfect and imperfect sequences have similar mean lengths centered around 189 bp, however, the imperfect reads have a much larger standard deviation (18 vs. 1). We fully expect that the perfect sequences here match the expected read structure, but the imperfect reads will be mostly a mixture of phiX control and sequencing errors of otherwise perfect constructs.
+So, we can see that \~92% of the reads are perfect, meaning that they have all four flanking sequences. Perfect and imperfect sequences have similar mean lengths centered around 189 bp, however, the imperfect reads have a much larger standard deviation (18 vs. 1). We fully expect that the perfect sequences here match the expected read structure, but the imperfect reads will be mostly a mixture of phiX control and sequencing errors of otherwise perfect constructs.
 
 We can see some evidence of this by looking at the length distributions of reads that have the read1 and read2 flanking sequences for our amplicon, vs. those that do not posess either and are therefore very "wrong."
 
@@ -273,7 +277,6 @@ ggplot(df_unique_BC_counts, aes(x = n)) +
 
 Although 109k barcode sequences is a pretty reasonable number based on the hundreds of thousands of mutant colonies that were obtained, we should be conservative and see if any of these barcodes are likely to be small sequencing errors. This does seem possible, since many unique barcodes are only observed 1 time.
 
-
 ## Starcode error correction
 
 We will use the program [starcode](https://github.com/gui11aume/starcode) to do an error correction. Essentially it calculates the hamming distance between barcodes and for low abundance barcodes that are very similar to high abundance barcodes, it collapses them into the same barcode sequence and assumes the low abundance barcode was a sequencing or PCR error.
@@ -290,7 +293,7 @@ df_starcode %>% filter(n>=4)
 
 ```
 
-Following error correction we obtained ~43k unique barcodes, with ~30k barcodes that were observed at least 4 times. Expressing this data as a plot gives almost the final figure:
+Following error correction we obtained \~43k unique barcodes, with \~30k barcodes that were observed at least 4 times. Expressing this data as a plot gives almost the final figure:
 
 ```{r}
 ggplot(df_starcode, aes(x = n)) + 
