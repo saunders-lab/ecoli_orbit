@@ -10,11 +10,45 @@ output:
     toc: yes
 ---
 
-
 # Notes
 
+This figure contains data from three ORBIT experiments where mutant libraries were created with mixtures of targeting oligos (from Twist Biosciences). Data figures were made in R notebooks and exported as pdfs. Cosmetic improvements were made in Adobe Illustrator. Note the diagram for Figures 8A was made in Adobe Illustrator.
 
-----
+See related code notebooks:
+
+Supplemental figures
+
+-   [Figure S13-S15. Twist mutant libraries - upstream and downstream reads for target loci.](https://saunders-lab.github.io/ecoli_orbit/code/supp_figs/mut_lib_grids.html)
+
+-   [Figure S16-S17. Explaining mutant library abundances.](https://saunders-lab.github.io/ecoli_orbit/code/supp_figs/supp_twist_lib.html)
+
+Twist oligo design
+
+-   [Twist oligo pool design - Transcription factors](https://saunders-lab.github.io/ecoli_orbit/code/twist_oligo_design/twist_orbit_TF_deletion.html)
+
+-   [Twist oligo pool design - Small RNAs](https://saunders-lab.github.io/ecoli_orbit/code/twist_oligo_design/twist_orbit_small_RNA_deletion.html)
+
+-   [Twist oligo pool design - Primers and cloning scheme](https://saunders-lab.github.io/ecoli_orbit/code/twist_oligo_design/twist_orbit_cloning_scheme.html)
+
+Mutant library characterization
+
+-   [Mutant libraries - Junction #1 sequencing data processing.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/left_side_TO_libs_processing.html)
+
+-   [Mutant libraries - Junction #2 sequencing data processing.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/right_side_TO_libs_processing.html)
+
+-   [Mutant libraries - Junction #1 analysis.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/left_side_TO_libs_analysis.html)
+
+-   [Mutant libraries - Junction #2 analysis.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/right_side_TO_libs_analysis.html)
+
+-   [Mutant libraries - Combined junction 1 & 2 analysis.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/upstream_downstream_combined_analysis.html)
+
+Twist TO abundance
+
+-   [Twist TO abundance - Sequencing data processing.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/TO_abundance/TO_abundance_processing.html)
+
+-   [Twist TO abundance - Analysis.](https://saunders-lab.github.io/ecoli_orbit/code/seq_data_processing/TO_abundance/TO_abundance_analysis.html)
+
+------------------------------------------------------------------------
 
 Setup packages and plotting for the notebook:
 
@@ -35,10 +69,9 @@ source("../tools/plotting_tools.R")
 theme_set(theme_notebook())
 ```
 
------
+------------------------------------------------------------------------
 
-# Fig. 5B - Perfect reads
-
+# Fig. 8B - Perfect reads
 
 ```{r}
 df_read_nearest_down <- read_csv('../../data/seq_data/left_side_TO_libs/df_read_nearest_left.csv')
@@ -51,32 +84,14 @@ df_read_nearest_up_down
 
 ```
 
-```{r}
+Let's look at both up and down junctions and see how many of the reads (that passed filter) are perfect matches to the targeting oligo deletions we designed.
 
-#df_read_nearest_up_down_annot <- left_join(df_read_nearest_up_down, read_n_lab, by = 'lib') %>% 
-#  filter(lib >0) %>% 
-#  mutate(status = paste0('off_',off_target, '_p_',perfect)) %>% 
-#  mutate(status = fct_relevel(status, 'off_TRUE_p_FALSE','off_FALSE_p_FALSE','off_FALSE_p_TRUE'))
+```{r}
 
 df_read_nearest_up_down_annot <- df_read_nearest_up_down %>% 
   filter(lib >0) %>% 
   mutate(status = paste0('off_',off_target, '_p_',perfect)) %>% 
   mutate(status = fct_relevel(status, 'off_TRUE_p_FALSE','off_FALSE_p_FALSE','off_FALSE_p_TRUE'))
-
-df_read_nearest_up_down_annot %>% group_by(lib) %>% summarise(n=n())
-df_read_nearest_up_down_annot %>% group_by(lib, up_down) %>% summarise(n=n())
-
-df_read_nearest_up_down_annot %>% group_by(lib, perfect) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
-  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE))
-
-df_read_nearest_up_down_annot %>% group_by(lib, perfect, up_down) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
-  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE))
-
-df_read_nearest_up_down_annot %>% group_by(lib, gene_id, perfect) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
-  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE))
-  
-df_read_nearest_up_down_annot %>% group_by(lib, gene_id, perfect) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
-  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE)) %>% group_by(lib) %>% summarise(mean_perf = mean(frac_perfect, na.rm = T), med_perf = median(frac_perfect, na.rm = T))
   
 plot_perfect_reads <-   ggplot(df_read_nearest_up_down_annot, aes(x = factor(lib), fill = status)) + 
     geom_bar(color = 'black',position = 'fill', linewidth = 0.25) +
@@ -88,7 +103,36 @@ plot_perfect_reads <-   ggplot(df_read_nearest_up_down_annot, aes(x = factor(lib
 plot_perfect_reads
 ```
 
-# Fig. 5C - Targeting oligos
+Let's calculate the perfect rate (by read) for each library. Let's separate by the up and downstream junctions to make sure there are no obvious issues.
+
+```{r}
+df_read_nearest_up_down_annot %>% group_by(lib, perfect, up_down) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
+  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE))
+```
+
+Looks similar to what the plot tells us.
+
+We can also look at the reads assigned to each target gene and ask what fraction of those reads are "perfect." 
+
+```{r}
+df_read_nearest_up_down_annot %>% group_by(lib, gene_id, perfect) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
+  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE))
+  
+```
+
+And let's get a summary on that - the mean and median perfect rates (by gene) for each library:
+
+```{r}
+
+df_read_nearest_up_down_annot %>% group_by(lib, gene_id, perfect) %>% summarise(n=n()) %>% pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
+  mutate(frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE)) %>% group_by(lib) %>% summarise(mean_perf = mean(frac_perfect, na.rm = T), med_perf = median(frac_perfect, na.rm = T))
+```
+
+Looks very good. Now let's move on to the target centric analysis.
+
+# Fig. 8C - Targeting oligos
+
+First, let's find all of the targets that have at least 1 perfect read for both the upstream and downstream junctions. We will consider those targets as "found" (score = 2) and targets that do not have perfect reads will be considered "not found." (score = 0)
 
 ```{r}
 
@@ -113,11 +157,13 @@ df_TOs_found_up_down <- left_join(df_TOs_found_down, df_read_nearest_all_summary
   mutate(found_up = ifelse(is.na(n_up) & is.na(min_val_up), F, T)) %>% 
   mutate(found_score = found_down + found_up)
 
-df_TOs_found_up_down %>% group_by(lib, found_score) %>% summarise(n=n(), min_reads_up = min(n_up), min_reads_down = min(n_down))
+df_TOs_found_up_down %>% group_by(lib, found_score) %>% summarise(n=n())
 
-df_TOs_found_up_down %>% group_by(lib) %>% summarise(n=n())
+```
 
-df_TOs_found_up_down
+Let's express that same data as a plot:
+
+```{r}
 
 plot_tos <- df_TOs_found_up_down %>% 
   filter(lib >0) %>% 
@@ -129,11 +175,17 @@ plot_tos <- df_TOs_found_up_down %>%
 plot_tos
 ```
 
+# Fig. 8D - Essential targets.
+
+Now let's look at the absent target genes in more detail. We categorized these targets both programmatically (essential gene lists) and manually (inspecting loci) as essential, perturbing or nonessesnital. See  `upstream_downstream_combined_analysis.Rmd` for details.
+
 ```{r}
 df_TOs_found_essential_updated <- read_csv("../../data/high_throughput_experiments/df_TOs_found_essential_updated.csv")
 
-df_TOs_found_essential_updated
+df_TOs_found_essential_updated %>% select(lib, gene, found_down, found_up, found_score, essential, essential_score)
 ```
+
+Let's plot this data simply, for the subset of genes that were totally absent from the ORBIT mutant libraries (found_score = 0).
 
 ```{r}
 
@@ -145,56 +197,11 @@ plot_essential <- ggplot(df_TOs_found_essential_updated %>% filter(found_score =
 plot_essential
 ```
 
-# 5D. Example genes from each library
+# 8E. Example genes from each library
 
-```{r}
-#don't pick genes also in lib 0 
-gene_list <- c('soxS', 'lysR','mcaS')
+Let's look at a specific target gene example from each of the three libraries: soxS, lysR, and mcaS.
 
-df_TOs %>% filter(gene == 'soxS')
-
-df_TOs %>% filter(gene == 'lysR')
-
-df_TOs %>% filter(gene == 'mcaS')
-
-df_TOs %>% filter(lib == 2)
-
-df_read_nearest_all_summary_down %>% filter(lib == 2)
-
-df_read_nearest_up_down %>% filter(gene_id=='soxS') %>% filter(min_val<=500) %>% group_by(perfect) %>% summarise(n=n())
-
-df_read_nearest_up_down %>% filter(gene_id=='lysR') %>% filter(min_val<=500) %>% group_by(perfect) %>% summarise(n=n())
-
-df_read_nearest_up_down %>% filter(gene_id=='mcaS') %>% filter(min_val<=500) %>% group_by(perfect) %>% summarise(n=n())
-
-
-plot_reads <- ggplot()+
-  geom_rect(data = df_TOs %>% select(lib, gene_id = gene, left_oligo_pos, right_oligo_pos) %>%
-              filter( gene_id %in% gene_list) %>%
-              mutate(gene_id = factor(gene_id, levels = gene_list)),
-                     aes(xmin = left_oligo_pos, xmax = right_oligo_pos, ymin = 0, ymax = 50), fill = 'light gray')+
-  geom_segment(data = df_read_nearest_down %>% filter(lib>0) %>% filter( gene_id %in% gene_list & min_val <500)%>%
-              mutate(gene_id = factor(gene_id, levels = gene_list)),
-               aes(x = start, xend = end, y = width, yend = width ),
-               #position = position_jitter(height = 75),
-               alpha = 0.01)+
-  geom_segment(data = df_read_nearest_up%>% filter(lib>0) %>% filter(gene_id %in% gene_list & min_val <500)%>%
-              mutate(gene_id = factor(gene_id, levels = gene_list)),
-             aes(x = start, xend = end, y = width, yend = width ),
-             #position = position_jitter(height = 75),
-             alpha = 0.01)+
-  scale_x_continuous(labels = scales::label_comma())+
-  scale_y_continuous(breaks = c(0,40,80), limits = c(0,100))+
-  labs(x = "Genomic position (bp)", y = 'Mapped read lengths (bp)')+
-  guides(fill = 'none')+
-  facet_wrap(~gene_id, scales = 'free', ncol = 1,strip.position = 'top')
-
-
-
-plot_reads
-```
-
-Update with better read plot
+First we need to do some housekeeping to setup the plot - read in gene positions, construct gene arrows, and organize reads by length. 
 
 ```{r}
 df_genes <- read_delim("../../../ecoli_ORBIT_paper_final/data/seq_data/All_instances_of_Genes_in_Escherichia_coli_K-12_substr._MG1655.txt") %>% 
@@ -204,10 +211,7 @@ df_genes <- read_delim("../../../ecoli_ORBIT_paper_final/data/seq_data/All_insta
 
 df_genes_lib <- left_join(df_TOs %>% select(lib, 'gene_id'='gene'), df_genes, by = c('gene_id'='Genes'))
 
-df_genes_lib
-```
 
-```{r}
 df_poly <- df_genes_lib %>% 
  #filter(right_pos<20000) %>% 
  pivot_longer(c(left_pos, right_pos), values_to = 'x_pos', names_to = 'left_right') %>% 
@@ -223,10 +227,7 @@ left_right == 'right_pos' & top_bottom == 'y_pos_center' ~ 5,
 left_right == 'right_pos' & top_bottom == 'y_pos_bottom' ~ 6)) %>% 
  arrange(gene_id, point_num)
 
-df_poly
-```
 
-```{r}
 
  kb_label <- function(x){
  # from s to ns
@@ -240,6 +241,8 @@ df_read_nearest_up_down_org <- df_read_nearest_up_down %>%
 
 df_read_nearest_up_down_org
 ```
+
+Now let's actually map the reads onto each gene diagram. We will "rasterise" the read data for avoid plotting thousands of individual objects.
 
 ```{r}
 
@@ -260,10 +263,26 @@ plot_gene_examples <- ggplot()+
 plot_gene_examples
 ```
 
-# Genome wide overview of lib 2
+And let's get the actual read statistics for this plot:
 
 ```{r}
-plot_tos <- ggplot(df_TOs_found_essential_updated %>% filter(lib == 2), aes(x = left_oligo_pos, y= found_up, shape = found_up))+
+# need to exclude the lysR reads in lib#0
+
+df_read_nearest_up_down %>% filter(gene_id %in% gene_list & lib >0) %>% 
+  filter(min_val<=500) %>% 
+  group_by(gene_id, perfect) %>% 
+  summarise(n=n())%>% 
+  pivot_wider(names_from = 'perfect', values_from = 'n', names_prefix = 'perfect_') %>% 
+  mutate(n_total = perfect_TRUE + perfect_FALSE, frac_perfect = perfect_TRUE / (perfect_TRUE + perfect_FALSE))
+
+```
+
+# Fig. 8F - long TF deletions overview
+
+For this genome wide overview, we will make three different plots as sort genome "tracks" and then stack them. First are the designed TOs and they are marked for whether mutants were found or not. Next we have all raw reads displayed (relatively transparent) by whether they are perfect or not. Finally, we have a binned histogram of that read data, making it easier to see the fraction of reads that are imperfect across the library.
+
+```{r}
+plot_to_track <- ggplot(df_TOs_found_essential_updated %>% filter(lib == 2), aes(x = left_oligo_pos, y= found_up, shape = found_up))+
     geom_point(fill = NA, alpha = 0.5) + 
   scale_shape_manual(values = c(13,21))+
   scale_y_discrete(limits=c(T,F))+
@@ -297,76 +316,28 @@ plot_jitter <-ggplot(df_read_nearest_up %>% filter(lib==2) %>% mutate(perfect = 
 
 #plot_lib_2 <- plot_grid(plot_jitter, plot_hist, align = 'v', axis = 'lr', rel_heights = c(0.3, 1), ncol = 1)
 
-plot_lib_2 <- plot_grid(plot_tos, plot_jitter, plot_hist, align = 'v', axis = 'lr', rel_heights = c(0.2, 0.33, 1), ncol = 1)
+plot_lib_2 <- plot_grid(plot_to_track, plot_jitter, plot_hist, align = 'v', axis = 'lr', rel_heights = c(0.2, 0.33, 1), ncol = 1)
 
 
 plot_lib_2
 ```
 
-```{r}
-plot_hist_2 <- ggplot(df_read_nearest_up %>% filter(lib==2) %>% mutate(perfect = ifelse(min_val ==0, T, F))%>% mutate(perfect = factor(perfect, levels = c(T, F))), aes(x = start, fill = perfect)) + 
-  geom_histogram(binwidth = 30000) + 
-  scale_x_continuous(labels = Mb_label)+
-  scale_fill_manual(values = c("#440154FF","#21908CFF"))+
-  facet_grid(row = 'perfect', scales = 'free_y', space = 'free_y')+
-  labs(x = 'Genomic position', y = 'Reads (30 kb bins)')+guides(fill = 'none')
 
-plot_hist_2
+# Fig. 8G - Upstream and downstream read counts.
 
-plot_tos <- ggplot(df_TOs_found_essential_updated %>% filter(lib == 2), aes(x = left_oligo_pos, y= found_up, shape = found_up))+
-    geom_point(fill = NA, alpha = 0.5) + 
-  scale_shape_manual(values = c(13,21))+
-  theme_nothing()
-
-plot_tos
-
-
-#plot_tos /plot_hist_2 
-
-plot_grid(plot_tos, plot_hist_2, align = 'hv', axis = 'lr', rel_heights = c(0.2,1), ncol = 1)
-
-
-```
-
+Now let's go back and look at the total read counts (upstream + downstream) for all the mutants in the three libraries. We will also use this data for the correlation plots in 8H.
 
 ```{r}
-df_bins <- df_read_nearest_up %>% filter(lib==2) %>% 
-  mutate(perfect = ifelse(min_val==0, T, F)) %>% 
-  mutate(bin = cut(read_start_pos, seq(1, 4641628 + 20000, 20000), right = FALSE)) %>%
-  group_by(bin) %>% 
-  summarise(reads = n(), TOs_found = n_distinct(gene_id), reads_perfect = sum(perfect)) %>% 
-  mutate(frac_perfect = reads_perfect / reads, norm_reads = reads / TOs_found)
-  
-  
-  ggplot(df_bins, aes(x = bin, y = norm_reads)) + geom_point()
-  
-  ggplot(df_bins, aes(x = as.numeric(bin))) + geom_point(aes(y = frac_perfect), shape =21)
-  
-  ggplot(df_bins, aes(x = bin, y = frac_perfect)) + geom_point()
-  
-  df_bins$bin %>% as.numeric() %>% head()
-  
-  ggplot(df_bins, aes(x = as.numeric(bin), y=reads, fill = frac_perfect)) + geom_area()
-  
-ggplot(df_read_nearest_up %>% filter(lib==2) %>% mutate(perfect = ifelse(min_val ==0, T, F)), aes(x=start, fill=perfect)) +
-  geom_area(stat ="bin", bindwidth = 20000, alpha=0.6)
-
-ggplot(df_read_nearest_up %>% filter(lib==2) %>% mutate(perfect = ifelse(min_val ==0, T, F)), aes(x=start, fill=perfect)) +
-  geom_freqpoly( bindwidth = 20000, alpha=0.6)
-```
-
-# Model
-
-
-```{r}
-df_vars <- read_csv("../../data/high_throughput_experiments/to_lib_left_right_counts_TOabun_energy_vars.csv")
+df_vars <- read_csv("../../code/supp_figs/df_vars.csv")
 
 df_vars
 ```
 
+Represent the data as boxplots and show individual genes as points.
+
 ```{r}
 
-plot_n_up_down <- ggplot(df_vars %>% filter(lib >0), aes(x = factor(lib), y = n_left + n_right)) + 
+plot_n_up_down <- ggplot(df_vars %>% filter(lib >0), aes(x = factor(lib), y = n_down + n_up)) + 
   geom_boxplot() + 
   geom_jitter(width = 0.2, height =0, alpha = 0.1, shape =21) + 
   scale_y_log10(limits = c(NA, NA))+
@@ -376,66 +347,72 @@ plot_n_up_down <- ggplot(df_vars %>% filter(lib >0), aes(x = factor(lib), y = n_
 plot_n_up_down
 ```
 
+# Fig 8H - Mutant abundance vs. oligo parameters
+
+For all these correlations, only the upstream junction read data was used, since that library had higher counts.
+
+First, let's look at the Twist TO abundance.
 
 ```{r}
 
 df_vars %>% 
-  filter(lib == 2) %>% 
-  filter(n_right>0 & to_abun>10) %>% 
-  mutate(n_right = log(n_right, 10), to_abun = log(to_abun, 10)) %>% 
-  lm(n_right ~ to_abun, data =.) %>%
+  filter(lib == 'long TFs') %>% 
+  filter(n_up>0 & to_abun>10) %>% 
+  mutate(n_up = log(n_up, 10), to_abun = log(to_abun, 10)) %>% 
+  lm(n_up ~ to_abun, data =.) %>%
   summary()
 
-plot_to_abun <- ggplot(df_vars %>% filter(to_abun >10 & lib==2), aes(x = to_abun, y = n_right)) +
+plot_to_abun <- ggplot(df_vars %>% filter(to_abun >10 & lib=='long TFs'), aes(x = to_abun, y = n_up)) +
   geom_smooth(method = 'lm')+ 
   geom_point(shape = 21, alpha = 0.25) +
   #scale_x_log10() +
   scale_y_log10()+
-  labs(x = 'Reads per oligo', y = 'Perfect reads per target', title = 'Library #2 Long TFs',subtitle = "Reads per target ~ oligo abundance (adj R2 = 0.04, p = 0.0023)")
+  labs(x = 'Reads per oligo', y = 'Perfect reads per target', title = 'Library #2 Long TFs',subtitle = "Reads per target ~ oligo abundance (adj R2 = 0.07, p = 0.00007)")
 
 plot_to_abun
 ```
 
+Next we examine the homology arm free energy.
+
 ```{r}
 df_vars %>% 
-  filter(lib == 2) %>% 
-  filter(n_right>0) %>% 
-  mutate(n_right = log(n_right, 10)) %>% 
-  lm(n_right ~ arm_total_duplex, data =.) %>%
+  filter(lib == 'long TFs') %>% 
+  filter(n_up>0) %>% 
+  mutate(n_up = log(n_up, 10)) %>% 
+  lm(n_up ~ arm_total_duplex, data =.) %>%
   summary()
 
-plot_hom_energy <- ggplot(df_vars %>% filter(lib == 2) , aes(x = arm_total_duplex, y = n_right)) +
+plot_hom_energy <- ggplot(df_vars %>% filter(lib == 'long TFs') , aes(x = arm_total_duplex, y = n_up)) +
   geom_smooth(method = 'lm')+ 
   geom_point(shape = 21, alpha = 0.25) +
   #scale_x_log10() +
   scale_y_log10()+
-  labs(x = 'Homology arm free energy (kcal/mol)', y = 'Perfect reads per target', title = 'Library #2 Long TFs',subtitle = "Reads per target ~ homology arm free energy (adj R2 = 0.102, p = 1.64e-6)")
+  labs(x = 'Homology arm free energy (kcal/mol)', y = 'Perfect reads per target', title = 'Library #2 Long TFs',subtitle = "Reads per target ~ homology arm free energy (adj R2 = 0.12, p = 1.98e-7)")
 
 plot_hom_energy
 ```
 
+Finally we look at the distance to the origin of replication. We will fit a linear model here just for consistency, but we are only displaying a loess smoothed trend line to show that the ori_dist relationship does not look linear.
+
 ```{r}
 df_vars %>% 
-  filter(lib == 2) %>% 
-  filter(n_right>0) %>% 
-  mutate(n_right = log(n_right, 10)) %>% 
-  lm(n_right ~ ori_dist, data =.) %>%
+  filter(lib == 'long TFs') %>% 
+  filter(n_up>0) %>% 
+  mutate(n_up = log(n_up, 10)) %>% 
+  lm(n_up ~ ori_dist, data =.) %>%
   summary()
 
-plot_ori_dist <- ggplot(df_vars %>% filter(lib == 2) , aes(x = ori_dist, y = n_right)) +
+plot_ori_dist <- ggplot(df_vars %>% filter(lib == 'long TFs') , aes(x = ori_dist, y = n_up)) +
   geom_smooth()+ 
   geom_point(shape = 21, alpha = 0.25) +
-  scale_x_continuous(labels = label_comma()) +
+  scale_x_continuous(labels = scales::label_comma()) +
   scale_y_log10()+
   labs(x = 'Distance to ori (bp)', y = 'Perfect reads per target', title = 'Library #2 Long TFs',subtitle = "smooth")
 
 plot_ori_dist
 ```
 
-
-# assemble figure
-
-
+# Assemble figure
 
 ```{r}
 theme_set(theme_figure())
@@ -444,20 +421,23 @@ plot_top <- plot_grid( plot_perfect_reads, plot_tos,NULL,
                       NULL, NULL, plot_essential, 
                       align = 'hv', axis = 'lr', rel_widths = c(2,2,1), rel_heights = c(1,0.4), ncol = 3, nrow =2)
 
-save_plot("../../figures/r_pdf_figs/main_figs/fig_8_top.pdf", plot_top, base_width = 5, base_height = 3.25)
+plot_top
 
-plot_lib_2 <- plot_grid(plot_tos, plot_jitter, plot_hist, align = 'v', axis = 'lr', rel_heights = c(0.2, 0.33, 1), ncol = 1)
+#save_plot("../../figures/r_pdf_figs/main_figs/fig_8_top.pdf", plot_top, base_width = 5, base_height = 3.25)
 
-#plot_lib_2
+plot_lib_2 <- plot_grid(plot_to_track, plot_jitter, plot_hist, align = 'v', axis = 'lr', rel_heights = c(0.2, 0.33, 1), ncol = 1)
 
-#plot_middle_pdf <- plot_grid(plot_reads, plot_lib_2, align = 'hv', axis = 'lr', rel_widths = c(1,3), ncol = 2)
 plot_middle_pdf <- plot_grid(plot_gene_examples, plot_lib_2, align = 'hv', axis = 'lr', rel_widths = c(1,3), ncol = 2)
 
-save_plot("../../figures/r_pdf_figs/main_figs/fig_8_middle.pdf", plot_middle_pdf, base_width = 9, base_height = 3)
+plot_middle_pdf
+
+#save_plot("../../figures/r_pdf_figs/main_figs/fig_8_middle.pdf", plot_middle_pdf, base_width = 9, base_height = 3)
 
 plot_bottom <- plot_grid(plot_n_up_down, plot_to_abun, plot_hom_energy, plot_ori_dist, align = 'hv', axis = 'tblr', ncol = 4)
 
-save_plot("../../figures/r_pdf_figs/main_figs/fig_8_bottom.pdf", plot_bottom, base_width = 9, base_height = 2)
+plot_bottom
+
+#save_plot("../../figures/r_pdf_figs/main_figs/fig_8_bottom.pdf", plot_bottom, base_width = 9, base_height = 2)
 
 ```
 

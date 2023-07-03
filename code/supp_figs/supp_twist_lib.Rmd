@@ -42,11 +42,7 @@ source("../tools/plotting_tools.R")
 theme_set(theme_notebook())
 ```
 
-```{r}
-#df_vars <- read_csv("../../data/high_throughput_experiments/to_lib_left_right_counts_TOabun_energy_vars.csv")
 
-#df_vars
-```
 
 # Upstream vs downstream junctions
 
