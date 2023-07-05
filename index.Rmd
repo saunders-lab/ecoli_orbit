@@ -49,7 +49,7 @@ Microbiology and synthetic biology depend on reverse genetic approaches to manip
 
 -   [Figure 7. Barcoded and multi-locus mutant libraries.](https://saunders-lab.github.io/ecoli_orbit/code/main_figs/fig_7_BC_oPool.html)
 
--   [Figure 8. High throughput knockout libraries for transcription factor and small RNA genes.](TBD) link TBD
+-   [Figure 8. High throughput knockout libraries for transcription factor and small RNA genes.](https://saunders-lab.github.io/ecoli_orbit/code/main_figs/fig_8_to_twist_libs.html)
 
 ## Supplemental figures
 

@@ -58,7 +58,7 @@ This folder contains the code notebooks used to process and analyze the data.
 
 -   [Figure 7. Barcoded and multi-locus mutant libraries.](https://saunders-lab.github.io/ecoli_orbit/code/main_figs/fig_7_BC_oPool.html)
 
--   [Figure 8. High throughput knockout libraries for transcription factor and small RNA genes.](TBD) link TBD
+-   [Figure 8. High throughput knockout libraries for transcription factor and small RNA genes.](https://saunders-lab.github.io/ecoli_orbit/code/main_figs/fig_8_to_twist_libs.html)
 
 #### Supplemental figures
 
@@ -137,7 +137,7 @@ This folder contains pdfs output from R containing preliminary figures. Final fi
 -   [BioProject](https://www.ncbi.nlm.nih.gov/sra/PRJNA989253)
 
 | Experiment                                 |   Library Name   |                             Run ID and Link                              |  Size  |
-|--------------------------------------------|:----------------:|:------------------------------------------------------------------------:|:------:|
+|-----------------|:-----------:|:-----------------------------:|:-----------:|
 | galK barcodes                              |    galK_BC16N    | [SRR25076308](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076308) | 123 Mb |
 | IDT oPool - left junction                  |     oPool_J1     | [SRR25076307](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076307) | 8.3 Mb |
 | Twist short TF deletions - left junction   |   short_TF_J1    | [SRR25076303](https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076303) | 25 Mb  |
