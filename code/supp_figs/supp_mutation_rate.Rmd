@@ -37,97 +37,7 @@ source("../tools/plotting_tools.R")
 theme_set(theme_notebook())
 ```
 
-```{r}
-df_breseq_1 <-  read_csv("../../data/low_throughput_experiments/2023_breseq_WT_49kb_data.csv")
-
-df_breseq_1
-```
-
-```{r}
-df_ids <- tibble(sample = 1:4, 
-                      plasmid = c('WT', 'pHelper_Ec1_Original','pHelper_Ec1_Original','pHelper_Ec1_Original'), 
-                      deletion = c('none','none','galK_original','134kb'),
-                      replicate = 1:4)
-
-df_bre_id_1 <- left_join(df_breseq_1, df_ids, by = 'sample') %>% 
-  mutate(plasmid = factor(plasmid, levels = c('WT','pHelper_Ec1_Original' )))
-
-df_bre_id_1
-```
-
-
-```{r}
-df_breseq_2 <- read_csv("../../data/low_throughput_experiments/2023_mut_rate_breseq_summary.csv")
-
-df_breseq_2
-```
-
-```{r}
-df_plasmids <- tibble(sample = 1:12, 
-                      plasmid = c(rep('pHelper_Beta',3),rep('pHelper_NoMutL',3),rep('pHelper_Ec1_LAA',3),rep('pHelper_Ec1_Original',3)), 
-                      deletion = rep(c('galK','hisA','metA'),4),
-                      replicate = rep(c(1,2,3), 4))
-
-df_bre_id_2 <- left_join(df_breseq_2, df_plasmids, by = 'sample') %>% 
-  mutate(plasmid = factor(plasmid, levels = c('pHelper_Ec1_Original','pHelper_Beta','pHelper_NoMutL','pHelper_Ec1_LAA' )))
-
-df_bre_plasmid <- bind_rows(df_bre_id_1, df_bre_id_2)
-
-df_bre_plasmid
-```
-
-```{r}
-ggplot(df_bre_plasmid %>% mutate(mutation = ifelse(mutation =='none',NA,mutation)) %>% filter(deletion != 'galK_original'), aes(x = deletion, y = locus, fill = mutation)) + 
-  geom_tile() + facet_grid(~plasmid, scales = 'free') + scale_fill_viridis_d() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  scale_x_discrete(limits = c('none','galK','hisA','metA','134kb'))
-
-df_bre_id_1 %>% 
-  mutate(mutation = ifelse(mutation =='none',NA,mutation)) %>% 
-  mutate(deletion = factor(deletion, levels = c('none','galK_original','134kb'))) %>% 
-  arrange(locus) %>% 
-  ggplot(aes(x = deletion, y = locus, fill = mutation)) + 
-  geom_tile(color = 'black') + facet_grid(~plasmid, scales = 'free',space = 'free_x') + scale_fill_viridis_d() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-      
-```
-
-note in the helper plasmid only strain - b0064 is the araC from the plasmid, which has a single mutation in it. b4170 is mutL, which intentionally has a mutation in it on the plasmid. The two mutants galK original and 134kb both had the helper plasmid cured. You can see that all strains retain the 4 mutations in the WT, except for the 134kb, which lost part of that region due to the large deletion. Note that the helper plasmid stock accumulated a mutation in b1188 which was passed to the other two strains.
-
-```{r}
-plot_locus_snps <- df_bre_id_2 %>% 
-  mutate(mutation = ifelse(mutation =='none',NA,mutation)) %>% 
-  mutate(locus = ifelse(locus == 'missing coverage (MC)', 'MC', locus)) %>% 
-  #mutate(deletion = factor(deletion, levels = c('none','galK_original','134kb'))) %>% 
-  arrange(locus) %>% 
-  ggplot(aes(x = deletion, y = locus, fill = mutation)) + 
-  geom_tile(color = 'black') + facet_grid(~plasmid, scales = 'free',space = 'free_x') + scale_fill_viridis_d() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-plot_locus_snps
-```
-
-
-
-```{r}
-df_mut_counts <- df_bre_id_2 %>% 
-  filter(mutation != 'none') %>% 
-  group_by(sample, plasmid, replicate)%>% 
-  summarise(count = n()) %>% 
-  group_by(plasmid) %>% 
-  mutate(avg = mean(count))
-
-df_mut_counts
-```
-
-```{r}
-plot_muts <- ggplot(df_mut_counts, aes(x = plasmid, y = count)) + 
-  geom_hline(yintercept = 4, linetype =2, color = 'gray')+ 
-  stat_summary(fun = 'mean', geom = 'crossbar',width = 0.25, size = 0.25)+
-  stat_summary(fun = 'mean', geom = 'point')+
-  geom_jitter(width = 0.1, height = 0, shape =21) + 
-  labs(x = NULL, y = "Whole genome mutation count")+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-plot_muts
-```
+# S5B - pHelper variant efficiencies
 
 ```{r}
 df_variants <- read_csv("../../data/low_throughput_experiments/2023_04_pHelper_variant_efficiencies.csv" )%>% #read in csv
@@ -195,24 +105,129 @@ plot_eff_2 <- ggplot(df_eff %>% filter(locus!='-'), aes(x = locus, y = eff , col
 plot_eff_2
 ```
 
-# Fixed Plasmids
+# S5C - pHelper variant background SNPs
+
+```{r}
+df_breseq_1 <-  read_csv("../../data/low_throughput_experiments/2023_breseq_WT_49kb_data.csv")
+
+df_breseq_1
+```
+
+```{r}
+df_ids <- tibble(sample = 1:4, 
+                      plasmid = c('WT', 'pHelper_Ec1_Original','pHelper_Ec1_Original','pHelper_Ec1_Original'), 
+                      deletion = c('none','none','galK_original','134kb'),
+                      replicate = 1:4)
+
+df_bre_id_1 <- left_join(df_breseq_1, df_ids, by = 'sample') %>% 
+  mutate(plasmid = factor(plasmid, levels = c('WT','pHelper_Ec1_Original' )))
+
+df_bre_id_1
+```
+
+
+```{r}
+df_breseq_2 <- read_csv("../../data/low_throughput_experiments/2023_mut_rate_breseq_summary.csv")
+
+df_breseq_2
+```
+
+```{r}
+df_plasmids <- tibble(sample = 1:12, 
+                      plasmid = c(rep('pHelper_Beta',3),rep('pHelper_NoMutL',3),rep('pHelper_Ec1_LAA',3),rep('pHelper_Ec1_Original',3)), 
+                      deletion = rep(c('galK','hisA','metA'),4),
+                      replicate = rep(c(1,2,3), 4))
+
+df_bre_id_2 <- left_join(df_breseq_2, df_plasmids, by = 'sample') %>% 
+  mutate(plasmid = factor(plasmid, levels = c('pHelper_Ec1_Original','pHelper_Beta','pHelper_NoMutL','pHelper_Ec1_LAA' )))
+
+df_bre_plasmid <- bind_rows(df_bre_id_1, df_bre_id_2)
+
+df_bre_plasmid
+```
+
+```{r}
+ggplot(df_bre_plasmid %>% mutate(mutation = ifelse(mutation =='none',NA,mutation)) %>% filter(deletion != 'galK_original'), aes(x = deletion, y = locus, fill = mutation)) + 
+  geom_tile() + facet_grid(~plasmid, scales = 'free') + scale_fill_viridis_d() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  scale_x_discrete(limits = c('none','galK','hisA','metA','134kb'))
+
+df_bre_id_1 %>% 
+  mutate(mutation = ifelse(mutation =='none',NA,mutation)) %>% 
+  mutate(deletion = factor(deletion, levels = c('none','galK_original','134kb'))) %>% 
+  arrange(locus) %>% 
+  ggplot(aes(x = deletion, y = locus, fill = mutation)) + 
+  geom_tile(color = 'black') + facet_grid(~plasmid, scales = 'free',space = 'free_x') + scale_fill_viridis_d() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      
+```
+
+note in the helper plasmid only strain - b0064 is the araC from the plasmid, which has a single mutation in it. b4170 is mutL, which intentionally has a mutation in it on the plasmid. The two mutants galK original and 134kb both had the helper plasmid cured. You can see that all strains retain the 4 mutations in the WT, except for the 134kb, which lost part of that region due to the large deletion. Note that the helper plasmid stock accumulated a mutation in b1188 which was passed to the other two strains.
+
+```{r}
+plot_locus_snps <- df_bre_id_2 %>% 
+  mutate(mutation = ifelse(mutation =='none',NA,mutation)) %>% 
+  mutate(locus = ifelse(locus == 'missing coverage (MC)', 'MC', locus)) %>% 
+  #mutate(deletion = factor(deletion, levels = c('none','galK_original','134kb'))) %>% 
+  arrange(locus) %>% 
+  ggplot(aes(x = deletion, y = locus, fill = mutation)) + 
+  geom_tile(color = 'black') + facet_grid(~plasmid, scales = 'free',space = 'free_x') + scale_fill_viridis_d() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_locus_snps
+```
+
+# S5D - pHelper variant SNPs summary
+
+```{r}
+df_mut_counts <- df_bre_id_2 %>% 
+  filter(mutation != 'none') %>% 
+  group_by(sample, plasmid, replicate)%>% 
+  summarise(count = n()) %>% 
+  group_by(plasmid) %>% 
+  mutate(avg = mean(count))
+
+df_mut_counts
+```
+
+```{r}
+plot_muts <- ggplot(df_mut_counts, aes(x = plasmid, y = count)) + 
+  geom_hline(yintercept = 4, linetype =2, color = 'gray')+ 
+  stat_summary(fun = 'mean', geom = 'crossbar',width = 0.25, size = 0.25)+
+  stat_summary(fun = 'mean', geom = 'point')+
+  geom_jitter(width = 0.1, height = 0, shape =21) + 
+  labs(x = NULL, y = "Whole genome mutation count")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_muts
+```
+
+
+
+# S5E - pHelper_V2 efficiencies
 
 ```{r}
 df_fixed <- read_csv("../../data/low_throughput_experiments/2023_06_06_mutation_rate_fixed_pHelper_eff.csv") %>% #read in csv
-  mutate(eff = Kan_count / LB_count) %>% group_by(helper_plasmid, locus) %>% mutate(avg_eff = mean(eff)) %>% #calculate efficiency and average efficiency for replicates")
-  mutate(helper_plasmid = factor(helper_plasmid, levels = c('pHelper_Ec1_original','pHelper_Ec1_fixed','pHelper_Ec1_noMutL_fixed' ))) %>% 
-  mutate(locus = factor(locus, levels = c('galK','hisA','metA','leuD','pInt_only')))
+  mutate(eff = Kan_count / LB_count) %>% group_by(helper_plasmid, locus) %>% mutate(avg_eff = mean(eff)) #%>% #calculate efficiency and average efficiency for replicates")
+  #mutate(helper_plasmid = factor(helper_plasmid, levels = c('pHelper_Ec1_original','pHelper_Ec1_fixed','pHelper_Ec1_noMutL_fixed' ))) %>% 
+  #mutate(locus = factor(locus, levels = c('galK','hisA','metA','leuD','pInt_only')))
+
+df_temp <- read_csv("../../data/low_throughput_experiments/2023_12_14_pHelperV2TSamp_goldstd.csv") %>% 
+  mutate(eff = Kan / LB) %>% 
+  group_by(locus) %>% mutate(avg_eff = mean(eff, na.rm = T)) %>%  #calculate efficiency and average efficiency for replicates
+  mutate(helper_plasmid = 'pHelper_V2_TS_ampR')
+
+
+df_all <- bind_rows(df_fixed, df_temp) %>% 
+    mutate(helper_plasmid = factor(helper_plasmid, levels = c('pHelper_Ec1_original','pHelper_Ec1_fixed','pHelper_Ec1_noMutL_fixed', 'pHelper_V2_TS_ampR'))) %>% 
+    mutate(locus = factor(locus, levels =c('galK','hisA','metA','leuD','pInt_only')))
 
 
 
-df_fixed
 ```
 
 ```{r}
 #Plot individual datapoints, mean dots and crossbars and negative control X's
-
-plot_fixed_eff <- ggplot(df_fixed %>% filter(locus!='pInt_only') %>% filter(helper_plasmid !='pHelper_Ec1_fixed'), aes(x = locus, y = eff , color = locus)) + 
-  geom_hline(data = df_fixed %>% filter(locus == 'pInt_only' & replicate ==1)%>% filter(helper_plasmid !='pHelper_Ec1_fixed'), aes(yintercept = avg_eff), linetype = 2, color= 'gray')+
+  
+plot_fixed_eff <- ggplot(df_all %>% filter(locus!='pInt_only') %>% filter(helper_plasmid !='pHelper_Ec1_fixed'), aes(x = locus, y = eff , color = locus)) + 
+  geom_hline(data = df_all %>% filter(locus == 'pInt_only' & replicate ==1)%>% filter(helper_plasmid !='pHelper_Ec1_fixed'), aes(yintercept = avg_eff), linetype = 2, color= 'gray')+
   #geom_hline(data = df_fixed %>% filter(locus == 'pInt_only'), aes(yintercept = eff), linetype = 2, color= 'gray')+
   stat_summary(fun = 'mean', geom = 'crossbar',width = 0.5, size = 0.25)+
   stat_summary(fun = 'mean', geom = 'point')+
@@ -223,9 +238,36 @@ plot_fixed_eff <- ggplot(df_fixed %>% filter(locus!='pInt_only') %>% filter(help
   #scale_x_discrete(labels = c('ORBIT','λRed'))+
   labs(y = 'Efficiency', x = NULL, fill = 'Strand') + guides(color = 'none') +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  
 
 plot_fixed_eff
+```
+
+# S5G - pHelper_TS_V2_ampR curing rate
+
+```{r}
+
+df_loss <- read_csv("../../data/low_throughput_experiments/2023_12_14_pHelperV2TSamp_loss_rate.csv") %>% 
+  mutate(not_lost = Carb / LB) %>% 
+  mutate(loss_rate = 1-not_lost) %>% 
+  group_by(locus) %>% mutate(avg_eff = mean(loss_rate, na.rm = T)) %>%  #calculate efficiency and average efficiency for replicates
+  mutate(locus = factor(locus, levels =c('galK','hisA','metA','leuD','pInt_only')))
+
+loss_rate_avg <- mean(df_loss$loss_rate)
+
+plot_loss <- ggplot(df_loss, aes(x = locus, y = loss_rate , color = locus)) + 
+  geom_hline(yintercept = loss_rate_avg, linetype = 2, color = 'black')+
+  stat_summary(fun = 'mean', geom = 'crossbar',width = 0.5, size = 0.25)+
+  stat_summary(fun = 'mean', geom = 'point')+
+  geom_point(position = position_jitterdodge(dodge.width = 1, jitter.width = 1), shape = 21) + 
+  #facet_grid(~locus)+
+  #scale_color_viridis_d()+
+  scale_color_manual( values = c("#440154FF", "#31688EFF", "#35B779FF" ,"#FDE725FF","gray"))+
+  scale_y_continuous(labels = scales::label_percent(), limits = c(0, NA)) + 
+  #scale_y_log10(labels = scales::label_percent(accuracy = 0.0001), limits = c(0.0000075, 0.01)) + 
+  labs(y = 'Helper loss rate \n (Carb sensitive / Total)', x = NULL) + guides(color = 'none') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_loss
 ```
 
 # Create figure
@@ -234,14 +276,17 @@ plot_fixed_eff
 theme_set(theme_figure())
 
 
-fig_mut_vars <- plot_grid(NULL,plot_eff_2,plot_muts, plot_locus_snps + guides(fill = 'none'), plot_fixed_eff,NULL, ncol = 2,rel_widths = c(2,3),
+subfig1 <- plot_grid(plot_muts,  plot_locus_snps + guides(fill = 'none'), ncol = 2, rel_widths = c(2,3))
+subfig2 <- plot_grid(NULL, NULL, NULL, plot_loss, ncol = 2, nrow = 2, rel_widths = c(1,1), rel_heights = c(1, 2))
+
+fig_mut_vars <- plot_grid(NULL,plot_eff_2,plot_fixed_eff, subfig1, NULL, subfig2, ncol = 2,rel_widths = c(2,3),
                    align = 'hv', axis = 'lr', scale = 1,
                    labels = c('','B','C','D','E',''))
 
 
 fig_mut_vars
 
-#save_plot("../../figures/r_pdf_figs/supp_figs/supp_mut_rate_vars.pdf", fig_mut_vars, base_width = 7, base_height = 9)
+save_plot("../../figures/r_pdf_figs/supp_figs/supp_mut_rate_vars.pdf", fig_mut_vars, base_width = 8, base_height = 9)
 
 ```
 

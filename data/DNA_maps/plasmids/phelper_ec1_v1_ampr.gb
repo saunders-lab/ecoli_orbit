@@ -1,4 +1,4 @@
-LOCUS       pHelper_Ec1_V1_ampR    11675 bp ds-DNA     circular     03-JUL-2023
+LOCUS       pHelper_Ec1_V1_ampR    11675 bp ds-DNA     circular     05-JUL-2023
 DEFINITION  .
 FEATURES             Location/Qualifiers
      rep_origin      1..589
@@ -13,8 +13,6 @@ FEATURES             Location/Qualifiers
                      /label="Pc"
      CDS             complement(3216..4181)
                      /label="XylS"
-     misc_feature    4915..4934
-                     /label="gib_site"
      promoter        5081..5161
                      /label="Pm promoter"
      misc_feature    5234..6046

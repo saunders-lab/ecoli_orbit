@@ -1,0 +1,141 @@
+---
+title: "Figure S10: Orthogonal triple mutants"
+subtitle: 'E. coli ORBIT 2022'
+author: 'Scott H. Saunders'
+output:
+  html_document:
+    theme: cosmo
+    highlight: tango
+    code_folding: show
+    toc: yes
+---
+
+
+# Notes
+
+This figure contains data from many different experiments that were used to optimize the protocol for ORBIT. 
+
+----
+
+Setup packages and plotting for the notebook:
+
+```{r setup, echo=T, message=FALSE, warning=FALSE}
+# Check packages
+source("../tools/package_setup.R")
+# Load packages
+library(tidyverse)
+library(cowplot)
+library(kableExtra)
+# Code display options
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=FALSE, echo = TRUE, message=FALSE, warning=FALSE, fig.align="center", fig.retina = 2)
+# Load plotting tools
+source("../tools/plotting_tools.R")
+#Modify the plot theme
+theme_set(theme_notebook())
+```
+
+-----
+
+# Fig. 10B - Full orthogonal heatmap
+
+Read in the data.
+
+```{r}
+
+
+df_heatmap <- read_csv("../../data/low_throughput_experiments/2022_10_14_chlor_orth_2_data.csv") %>% mutate(eff = Chlor_count / LB_count)
+
+
+df_heatmap
+```
+
+```{r}
+
+plot_heatmap <- ggplot(df_heatmap, aes(x = attP, y = attB, fill = eff)) + 
+  geom_tile(color = 'white', size = 0.25) + 
+  geom_tile(data = . %>% filter(match == T), fill = NA, color = 'black', size = 0.5)+
+  geom_text(aes(label = scales::label_percent(accuracy = 0.01)(eff)), size = 2.85)+
+  scale_fill_viridis_c(trans = 'log',label = scales::percent_format(), breaks = c(0.005, 0.0005,0.00005)) + 
+  labs(y = 'attB version\n(∆galK targeting oligo)' , x = 'attP version\n(pInt_chlorR)', fill = 'Efficiency')
+
+plot_heatmap
+```
+
+```{r}
+theme_set(theme_figure())
+
+
+#fig_s9 <- plot_grid(plot_heatmap + guides(fill = 'none'), plot_eff, nrow = 1,
+#                   align = 'hv', axis = 'lr', scale = 1,
+#                   labels = c('B','C'))
+
+
+#fig_5_multi
+
+plot_heatmap
+
+save_plot("../../figures/r_pdf_figs/supp_figs/fig_S10_orth_att_heatmap.pdf", plot_heatmap, base_width = 4, base_height = 3)
+```
+
+# Fig. S10C - attB variant efficiency
+
+```{r}
+
+df_att <- read_csv('../../data/low_throughput_experiments/2023_11_28_attB_variants.csv') %>% #read in csv
+  mutate(eff = Chlor / LB) %>% 
+  group_by(condition, locus) %>% mutate(avg_eff = mean(eff, na.rm = T)) %>%  #calculate efficiency and average efficiency for replicates
+  mutate(locus = factor(locus, levels =c('galK','none'))) %>% 
+  mutate(condition = factor(condition, levels = c('attB1','attB2', 'attB3', 'attB5','attB1_control','attB2_control', 'attB3_control', 'attB5_control')))
+
+df_att
+
+```
+
+
+Then we can plot the data:
+
+```{r}
+theme_set(theme_figure())
+
+plot_att <- ggplot(df_att %>% filter(locus == 'galK'), aes(x = condition, y = eff )) + 
+  #geom_hline(yintercept = orbit_bg, linetype = 2, color = 'gray')+
+  stat_summary(fun = 'mean', geom = 'crossbar',width = 0.5, size = 0.25)+
+  stat_summary(fun = 'mean', geom = 'point')+
+  geom_jitter(shape =21, height = 0, width = 0.1)+
+  geom_point(data = df_att %>% filter(locus == 'none'), shape = 4, color = 'gray')+
+  scale_y_continuous(labels = scales::label_percent(accuracy = 0.1), limits = c(0, NA))+
+  #scale_color_viridis_d()+
+  #scale_y_log10(labels = scales::label_percent(accuracy = 0.0001), limits = c(0.001, NA)) + 
+ # scale_x_discrete(labels = c('ORBIT','λRed'))+
+  labs(y = 'Efficiency', x = NULL, fill = 'Strand') + guides(color = 'none') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_att
+
+
+save_plot('../../figures/r_pdf_figs/supp_figs/attB_variant_efficiency.pdf',plot_att, base_width = 2.5, base_height = 2)
+
+```
+
+Test for statistical significance.
+
+```{r}
+
+attB1 <- (df_att %>% filter(condition == 'attB1' & locus == 'galK'))$eff # %>% log()
+attB2 <- (df_att %>% filter(condition == 'attB2' & locus == 'galK'))$eff #%>% log()
+attB3 <- (df_att %>% filter(condition == 'attB3' & locus == 'galK'))$eff
+attB5 <- (df_att %>% filter(condition == 'attB5' & locus == 'galK'))$eff
+
+t.test(attB1, attB2, alternative = 'less')
+
+t.test(attB1, attB3, alternative = 'less')
+
+t.test(attB1, attB5, alternative = 'less')
+
+
+
+```
+
+```{r}
+sessionInfo()
+```

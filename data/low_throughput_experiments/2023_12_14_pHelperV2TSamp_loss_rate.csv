@@ -1,0 +1,11 @@
+﻿locus,replicate,LB,Carb
+galK,1,5,0
+galK,2,5,2
+hisA,1,5,0
+hisA,2,5,0
+metA,1,5,0
+metA,2,5,2
+leuD,1,5,0
+leuD,2,5,2
+pInt_only,1,4,1
+pInt_only,2,4,0

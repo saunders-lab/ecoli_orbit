@@ -1,4 +1,4 @@
-LOCUS       pHelper_NoMutL_V2_gentR 9611 bp ds-DNA     circular     03-JUL-2023
+LOCUS       pHelper_NoMutL_V2_gentR 9611 bp ds-DNA     circular     05-JUL-2023
 DEFINITION  .
 KEYWORDS    "Name:pHelper_bxb-1_ec1_gentR" "Box:1" "Made By:Scott Saunders"
             "Plasmid Function:ORBIT helper plasmid" "Plasmid Backbone"
@@ -11,77 +11,22 @@ KEYWORDS    "Name:pHelper_bxb-1_ec1_gentR" "Box:1" "Made By:Scott Saunders"
 FEATURES             Location/Qualifiers
      rep_origin      1..589
                      /label="ColE1"
-     primer_bind     490..509
-                     /label="pBR322ori-F"
-     primer_bind     743..760
-                     /label="L4440"
      terminator      850..877
                      /label="rrnB T2 terminator"
-     misc_feature    858..877
-                     /label="gib_site"
-     misc_feature    935..954
-                     /label="gib_site_2"
      gene            complement(938..1471)
                      /label="gentR (aacC1)"
-     primer          1394..1413
-                     /label="gent_fwd"
-                     /note="sequence: gatgcccatacttgagccac"
-     primer          complement(1394..1413)
-                     /label="gent_rev"
-                     /note="sequence: gtggctcaagtatgggcatc"
-     misc_feature    complement(1750..1769)
-                     /label="gib_site_1"
-     primer          complement(1875..1926)
-                     /label="primer_068_pMQ30_gent_rev_[pHelper]"
-                     /note="sequence: tagccgtcaagttgtcataaaaaactgtattataagtaaatgcatgtatact"
      CDS             complement(1907..2785)
                      /label="araC"
-     primer          2763..2782
-                     /label="araC_fwd"
-                     /note="sequence: ggatcattttgcgcttcagc"
      misc_feature    complement(2936..2964)
                      /label="Pc"
-     primer          complement(2986..3005)
-                     /label="pHelper_bxb-1_gent_test REV"
-                     /note="sequence: gcaaaaaggaagtggcttgagccgtgcaaataatcaatgt"
-     primer          3006..3025
-                     /label="pORTMAGE-Ec1 FWD"
-                     /note="sequence: acattgattatttgcacggctcaagccacttcctttttgc"
      CDS             complement(3006..3971)
                      /label="XylS"
-     primer          complement(3275..3294)
-                     /label="pHelp_seq_xylS_rev"
-                     /note="sequence: gaatatcagccttgagcggt"
-     misc_feature    4312..4331
-                     /label="gib_site"
-     misc_feature    4705..4724
-                     /label="gib_site"
      promoter        4871..4951
                      /label="Pm promoter"
      misc_feature    5024..5836
                      /label="CspRecT "
-     misc_feature    complement(5823..5842)
-                     /label="gib_rev"
-     primer          5823..5860
-                     /label="remove_mutL_fwd"
-                     /note="sequence: gcgaggtgttttaaggatcctctagagtcgacctgcag"
-     primer          complement(5823..5862)
-                     /label="remove_mutL_rev"
-                     /note="sequence: gcctgcaggtcgactctagaggatccttaaaacacctcgc"
-     misc_feature    complement(5837..5842)
-                     /label="mutL_up"
-     misc_feature    5843..5853
-                     /label="mutL_down"
-     misc_feature    5843..5860
-                     /label="gib_fwd"
      terminator      5915..6009
                      /label="lambda t0 terminator"
-     primer          complement(5989..6009)
-                     /label="pORTMAGE-Ec1 REV"
-                     /note="sequence: ataaaaatgctatggcatagattctcaccaataaaaaacgc"
-     primer          6010..6030
-                     /label="pHelper_bxb-1_gent_test FWD"
-                     /note="sequence: cgttttttattggtgagaatctatgccatagcatttttatc"
      misc_feature    6054..6081
                      /label="ParaB"
      misc_feature    6118..6123
@@ -92,32 +37,14 @@ FEATURES             Location/Qualifiers
                      /label="bxb-1 Int"
      CDS             6132..7634
                      /translation="MRALVVIRLSRVTDATTSPERQLESCQQLCAQRGWDVVGVAEDLDVSGAVDPFDRKRRPNLARWLAFEEQPFDVIVAYRVDRLTRSIRHLQQLVHWAEDHKKLVVSATEAHFDTTTPFAAVVIALMGTVAQMELEAIKERNRSAAHFNIRAGKYRGSLPPWGYLPTRVDGEWRLVPDPVQRERILEVYHRVVDNHEPLHLVAHDLNRRGVLSPKDYFAQLQGREPQGREWSATALKRSMISEAMLGYATLNGKTVRDDDGAPLVRAEPILTREQLEALRAELVKTSRAKPAVSTPSLLLRVLFCAVCGEPAYKFAGGGRKHPRYRCRSMGFPKHCGNGTVAMAEWDAFCEEQVLDLLGDAERLEKVWVAGSDSAVELAEVNAELVDLTSLIGSPAYRAGSPQREALDARIAALAARQEELEGLEARPSGWEWRETGQRFGDWWREQDTAAKNTWLRSMNVRLTFDVRGGLTRTIDFGDLQEYEQHLRLGSVVERLHTGMS*"
-     primer          complement(6257..6274)
-                     /label="bxb-1_rev"
-                     /note="sequence: ccggagacgtccagatcc"
-     primer          7503..7520
-                     /label="primer_065_pHelp_seq_bxb-1_fwd"
-                     /note="sequence: atgaacgttcggctgacg"
      misc_feature    7641..7728
                      /label="terminator"
      terminator      7669..7715
                      /label="rrnB T1 terminator"
-     misc_feature    complement(7775..7795)
-                     /label="gib_site"
-     primer          complement(7775..7815)
-                     /label="pKM461 REV (2)"
-                     /note="sequence: ttttatagtttctgttgcatatcttgtgcaatgtaacatca"
-     misc_feature    7776..7798
-                     /label="gib_site"
-     primer          7776..7821
-                     /label="pKM461 FWD (3)"
-                     /note="sequence: gatgttacattgcacaagatatgcaacagaaactataaaaaataca"
      misc_feature    7796..8142
                      /label="SacR"
      CDS             8155..9576
                      /label="SacB"
-     misc_feature    9563..9585
-                     /label="gib_site"
 ORIGIN
         1 ttgagatcct ttttttctgc gcgtaatctg ctgcttgcaa acaaaaaaac caccgctacc
        61 agcggtggtt tttttgccgg atcaagagct accaactctt tttccgaagg taactggctt
