@@ -371,7 +371,7 @@ direct the integration of a non-replicating plasmid. This method,
 Oligonucleotide Recombineering followed by Bxb-1 Integrase Targeting
 (ORBIT) was pioneered in <em>Mycobacteria</em>, and here we adapt and
 expand it for <em>E. coli</em>. Our redesigned plasmid toolkit achieved
-nearly 1000x higher efficiency than λ Red recombination and enabled
+significantly higher efficiency than λ Red recombination and enabled
 precise, stable knockouts (&lt;134 kb) and integrations (&lt;11 kb) of
 various sizes. Additionally, we constructed multi-mutants (double and
 triple) in a single transformation, using orthogonal attachment sites.
@@ -387,10 +387,14 @@ sophisticated mutant libraries.</p>
 <div id="resources" class="section level2">
 <h2>Resources</h2>
 <ul>
+<li><p><a href="https://www.biorxiv.org/content/10.1101/2023.06.28.546561v1">bioRxiv
+preprint</a></p></li>
+<li><p><a href="https://saunders-lab.github.io/ecoli_orbit/">Paper
+website</a> (static html code notebooks)</p></li>
 <li><p><a href="https://saunders-lab.shinyapps.io/ORBIT_TO_design_ecMG1655/">Targeting
 oligo design app</a></p></li>
-<li><p><a href="saunderslab.org/research/ec_orbit">Saunders lab ORBIT
-help page</a></p></li>
+<li><p><a href="https://saunderslab.org/research/ec_orbit">Saunders lab
+ORBIT help page</a></p></li>
 </ul>
 </div>
 <div id="code-repository" class="section level2">
@@ -433,8 +437,9 @@ computational content)</p></li>
 computational content)</p></li>
 <li><p><a href="https://saunders-lab.github.io/ecoli_orbit/code/main_figs/fig_7_BC_oPool.html">Figure
 7. Barcoded and multi-locus mutant libraries.</a></p></li>
-<li><p><a href="TBD">Figure 8. High throughput knockout libraries for
-transcription factor and small RNA genes.</a> link TBD</p></li>
+<li><p><a href="https://saunders-lab.github.io/ecoli_orbit/code/main_figs/fig_8_to_twist_libs.html">Figure
+8. High throughput knockout libraries for transcription factor and small
+RNA genes.</a></p></li>
 </ul>
 </div>
 <div id="supplemental-figures" class="section level4">
@@ -534,6 +539,102 @@ TO abundance - Analysis.</a></p></li>
 <p>This folder contains pdfs output from R containing preliminary
 figures. Final figures were made in illustrator.</p>
 </div>
+</div>
+<div id="sra-raw-sequencing-data" class="section level2">
+<h2>SRA raw sequencing data</h2>
+<ul>
+<li><a href="https://www.ncbi.nlm.nih.gov/sra/PRJNA989253">BioProject</a></li>
+</ul>
+<table>
+<colgroup>
+<col width="22%" />
+<col width="17%" />
+<col width="41%" />
+<col width="17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Experiment</th>
+<th align="center">Library Name</th>
+<th align="center">Run ID and Link</th>
+<th align="center">Size</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>galK barcodes</td>
+<td align="center">galK_BC16N</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076308">SRR25076308</a></td>
+<td align="center">123 Mb</td>
+</tr>
+<tr class="even">
+<td>IDT oPool - left junction</td>
+<td align="center">oPool_J1</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076307">SRR25076307</a></td>
+<td align="center">8.3 Mb</td>
+</tr>
+<tr class="odd">
+<td>Twist short TF deletions - left junction</td>
+<td align="center">short_TF_J1</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076303">SRR25076303</a></td>
+<td align="center">25 Mb</td>
+</tr>
+<tr class="even">
+<td>Twist long TF deletions - left junction</td>
+<td align="center">long_TF_J1</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076301">SRR25076301</a></td>
+<td align="center">16 Mb</td>
+</tr>
+<tr class="odd">
+<td>Twist small RNA deletions - left junction</td>
+<td align="center">small_RNA_J1</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076299">SRR25076299</a></td>
+<td align="center">18 Mb</td>
+</tr>
+<tr class="even">
+<td>IDT oPool - right junction</td>
+<td align="center">oPool_J2</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076304">SRR25076304</a></td>
+<td align="center">15 Mb</td>
+</tr>
+<tr class="odd">
+<td>Twist short TF deletions - right junction</td>
+<td align="center">short_TF_J2</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076302">SRR25076302</a></td>
+<td align="center">43 Mb</td>
+</tr>
+<tr class="even">
+<td>Twist long TF deletions - right junction</td>
+<td align="center">long_TF_J2</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076300">SRR25076300</a></td>
+<td align="center">39 Mb</td>
+</tr>
+<tr class="odd">
+<td>Twist small RNA deletions - right junction</td>
+<td align="center">small_RNA_J2</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076298">SRR25076298</a></td>
+<td align="center">30 Mb</td>
+</tr>
+<tr class="even">
+<td>Twist short TF oligo abundance</td>
+<td align="center">short_TF_oligos</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076297">SRR25076297</a></td>
+<td align="center">45 Mb</td>
+</tr>
+<tr class="odd">
+<td>Twist long TF oligo abundance</td>
+<td align="center">long_TF_oligos</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076306">SRR25076306</a></td>
+<td align="center">27 Mb</td>
+</tr>
+<tr class="even">
+<td>Twist small RNA oligo abundance</td>
+<td align="center">small_RNA_oligos</td>
+<td align="center"><a href="https://trace.ncbi.nlm.nih.gov/Traces/sra?run=SRR25076305">SRR25076305</a></td>
+<td align="center">42 Mb</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 
